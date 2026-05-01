@@ -1,0 +1,63 @@
+.milkman-auth-page {
+    background: radial-gradient(circle at 0% 0%, #f0f7ff 0%, #ffffff 100%);
+}
+
+.milkman-auth-card {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.milkman-logo-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.milkman-icon {
+    background-color: #000;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-submit:disabled {
+    background-color: #a1a1aa;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.form-control:disabled {
+    background-color: #f4f4f5;
+    cursor: not-allowed;
+}
+
+.error-message {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 20px;
+    border: 1px solid #fee2e2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.success-badge {
+    background-color: #ecfdf5;
+    color: #047857;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    margin-bottom: 12px;
+}
