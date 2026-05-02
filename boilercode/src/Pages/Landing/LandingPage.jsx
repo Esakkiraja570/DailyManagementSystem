@@ -158,9 +158,9 @@ const LandingPage = () => {
         <div className="container d-flex flex-column flex-md-row justify-content-between align-items-center">
           <div className="fw-bold fs-4 mb-3 mb-md-0">DMS</div>
           <div className="d-flex gap-4 small opacity-75">
-            <a href="#" className="text-white text-decoration-none">Privacy Policy</a>
-            <a href="#" className="text-white text-decoration-none">Terms of Service</a>
-            <a href="#" className="text-white text-decoration-none">Contact Us</a>
+            <a href="#!" className="text-white text-decoration-none">Privacy Policy</a>
+            <a href="#!" className="text-white text-decoration-none">Terms of Service</a>
+            <a href="#!" className="text-white text-decoration-none">Contact Us</a>
           </div>
           <div className="small opacity-50 mt-3 mt-md-0">© 2024 DMS. All rights reserved.</div>
         </div>

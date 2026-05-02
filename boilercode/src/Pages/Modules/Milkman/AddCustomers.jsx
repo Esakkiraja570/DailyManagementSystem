@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { UserPlus, Phone, MapPin, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { BASE_URL, getMilkmanMobile } from './milkmanApi';
 import './Dashboard.css';
 
 const AddCustomers = ({ onBack, onSuccess }) => {
@@ -13,8 +14,7 @@ const AddCustomers = ({ onBack, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const storedMilkman = JSON.parse(localStorage.getItem('milkman') || '{}');
-  const milkmanMobile = storedMilkman?.mobile || localStorage.getItem("mobile");
+  const milkmanMobile = getMilkmanMobile();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,7 +29,7 @@ const AddCustomers = ({ onBack, onSuccess }) => {
     try {
       // API call to match your backend logic
       // POST /api/customer/add/{milkmanMobile}
-      const response = await axios.post(`http://localhost:1010/api/customer/add/${milkmanMobile}`, {
+      const response = await axios.post(`${BASE_URL}/customer/add/${milkmanMobile}`, {
         name: formData.name,
         mobile: formData.mobile,
         address: formData.address

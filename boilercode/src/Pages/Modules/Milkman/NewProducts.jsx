@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { BASE_URL, getMilkmanMobile } from './milkmanApi';
 import { 
   Package, Plus, Image as ImageIcon, Trash2, 
   Zap, ZapOff, CheckCircle, XCircle, Loader2, 
@@ -24,23 +25,24 @@ const NewProducts = ({ onBack }) => {
   });
   const [preview, setPreview] = useState(null);
 
-  const milkmanMobile = localStorage.getItem("mobile");
+  const milkmanMobile = getMilkmanMobile();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:1010/api/product/milkman/${milkmanMobile}`);
-      setProducts(res.data || []);
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      const res = await axios.get(`${ROOT_URL}/product/list`);
+      setProducts((res.data || []).filter(p => p.milkmanMobile === milkmanMobile || !p.milkmanMobile)); // Handling if milkmanMobile is missing in some entries
     } catch (err) {
       console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [milkmanMobile]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -56,19 +58,14 @@ const NewProducts = ({ onBack }) => {
     e.preventDefault();
     setActionLoading(true);
 
-    const data = new FormData();
-    data.append('name', formData.name);
-    data.append('price', formData.price);
-    data.append('stock', formData.stock);
-    data.append('description', formData.description);
-    data.append('specialMessage', formData.specialMessage);
-    if (formData.imageFile) {
-      data.append('imageFile', formData.imageFile);
-    }
-
     try {
-      await axios.post(`http://localhost:1010/api/product/add/${milkmanMobile}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      await axios.post(`${ROOT_URL}/product/add`, {
+        name: formData.name,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        description: formData.description,
+        promoted: true
       });
       setShowAddForm(false);
       resetForm();
@@ -85,11 +82,12 @@ const NewProducts = ({ onBack }) => {
     setPreview(null);
   };
 
-  const toggleStatus = async (id, field) => {
+  const toggleStatus = async (id) => {
     try {
-      // Assuming backend has endpoints like /toggle-promote/{id} and /toggle-availability/{id}
-      // or a generic update endpoint
-      await axios.put(`http://localhost:1010/api/product/toggle-${field}/${id}`);
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      const currentProduct = products.find(p => p.id === id);
+      const nextStatus = !currentProduct?.promoted;
+      await axios.put(`${ROOT_URL}/product/promote/${id}?status=${nextStatus}`);
       fetchProducts();
     } catch (err) {
       console.error(err);
@@ -206,17 +204,10 @@ const NewProducts = ({ onBack }) => {
                   <div className="d-grid gap-2">
                     <button 
                       className={`btn btn-sm rounded-pill fw-bold d-flex align-items-center justify-content-center gap-2 ${p.promoted ? 'btn-outline-warning text-dark' : 'btn-warning'}`}
-                      onClick={() => toggleStatus(p.id, 'promote')}
+                      onClick={() => toggleStatus(p.id)}
                     >
                       {p.promoted ? <ZapOff size={16}/> : <Zap size={16}/>}
                       {p.promoted ? 'Un-promote' : 'Promote to Customers'}
-                    </button>
-                    <button 
-                      className={`btn btn-sm rounded-pill fw-bold d-flex align-items-center justify-content-center gap-2 ${p.stock > 0 ? 'btn-outline-danger' : 'btn-success text-white'}`}
-                      onClick={() => toggleStatus(p.id, 'availability')}
-                    >
-                      {p.stock > 0 ? <XCircle size={16}/> : <CheckCircle size={16}/>}
-                      {p.stock > 0 ? 'Mark Unavailable' : 'Mark Available'}
                     </button>
                   </div>
                 </div>

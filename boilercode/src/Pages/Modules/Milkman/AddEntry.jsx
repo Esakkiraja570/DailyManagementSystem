@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { BASE_URL, getMilkmanMobile } from './milkmanApi';
 import { 
   Calendar as CalendarIcon, ArrowLeft, Loader2, Save, 
   Edit3, Droplet, Package, Plus, Minus, ShoppingCart, 
@@ -25,11 +26,29 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
   // Product Order State
   const [quantities, setQuantities] = useState({});
 
-  const milkmanMobile = localStorage.getItem("mobile");
+  const milkmanMobile = getMilkmanMobile();
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch milk entries for customer
+      const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
+      setEntries(entriesRes.data || []);
+
+      // Fetch available products for this milkman
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      const prodRes = await axios.get(`${ROOT_URL}/product/list`);
+      setProducts((prodRes.data || []).filter(p => p.milkmanMobile === milkmanMobile || !p.milkmanMobile));
+    } catch (err) {
+      console.error("Data fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [customer.id, milkmanMobile]);
 
   useEffect(() => {
     fetchData();
-  }, [customer]);
+  }, [fetchData]);
 
   useEffect(() => {
     // Check if an entry exists for the selected date
@@ -44,23 +63,6 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
       setExistingEntryId(null);
     }
   }, [date, entries]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch milk entries for customer
-      const entriesRes = await axios.get(`http://localhost:1010/api/milk/${customer.id}`);
-      setEntries(entriesRes.data || []);
-
-      // Fetch available products
-      const prodRes = await axios.get(`http://localhost:1010/api/product/milkman/${milkmanMobile}`);
-      setProducts((prodRes.data || []).filter(p => p.stock > 0)); // Only show available
-    } catch (err) {
-      console.error("Data fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const showNotification = (msg, type = 'success') => {
     setNotification({ msg, type });
@@ -78,7 +80,7 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
     try {
       if (existingEntryId) {
         // Edit Mode
-        await axios.put(`http://localhost:1010/api/milk/update/${existingEntryId}`, {
+        await axios.put(`${BASE_URL}/milk/update/${existingEntryId}`, {
           morning: mornVal,
           evening: eveVal,
           total: total,
@@ -87,7 +89,7 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
         showNotification("Milk entry updated successfully!");
       } else {
         // Add Mode
-        await axios.post(`http://localhost:1010/api/milk/add/${customer.id}`, {
+        await axios.post(`${BASE_URL}/milk/add/${customer.id}`, {
           date: date,
           morning: mornVal,
           evening: eveVal,
@@ -98,7 +100,7 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
       }
       
       // Refresh entries
-      const entriesRes = await axios.get(`http://localhost:1010/api/milk/${customer.id}`);
+const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
       setEntries(entriesRes.data || []);
       
     } catch (err) {
@@ -114,14 +116,14 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
     if (window.confirm("Are you sure you want to delete this milk entry? This cannot be undone.")) {
       setSaving(true);
       try {
-        await axios.delete(`http://localhost:1010/api/milk/delete/${existingEntryId}`);
+        await axios.delete(`${BASE_URL}/milk/delete/${existingEntryId}`);
         showNotification("Milk entry deleted successfully!");
         setMorning('');
         setEvening('');
         setExistingEntryId(null);
         
         // Refresh entries
-        const entriesRes = await axios.get(`http://localhost:1010/api/milk/${customer.id}`);
+        const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
         setEntries(entriesRes.data || []);
       } catch (err) {
         console.error(err);
@@ -135,11 +137,21 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
   const handleRegularEntry = async () => {
     setSaving(true);
     try {
-      await axios.post(`http://localhost:1010/api/milk/regular/${customer.id}`);
-      showNotification("Regular entry added successfully!");
+      if (existingEntryId) {
+        await axios.put(`${BASE_URL}/milk/update/${existingEntryId}`, {
+          morning: 0,
+          evening: 0,
+          total: 0,
+          edited: true
+        });
+        showNotification("Today's entry already exists and has been refreshed.");
+      } else {
+        await axios.post(`${BASE_URL}/milk/regular/${customer.id}`);
+        showNotification("Regular entry added successfully!");
+      }
       
       // Refresh entries
-      const entriesRes = await axios.get(`http://localhost:1010/api/milk/${customer.id}`);
+      const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
       setEntries(entriesRes.data || []);
     } catch (err) {
       console.error(err);
@@ -160,15 +172,13 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
     const qty = quantities[product.id] || 1;
     setOrderLoading(product.id);
     try {
-      // Note: Added date to order payload if backend supports it, otherwise backend sets date.
-      await axios.post(`http://localhost:1010/api/order/place`, {
-        customerMobile: customer.mobile,
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      await axios.post(`${ROOT_URL}/order/place`, {
         productId: product.id,
-        productName: product.name,
+        customerMobile: customer.mobile,
         quantity: qty,
         total: product.price * qty,
-        milkmanMobile: milkmanMobile,
-        date: date
+        status: 'PENDING'
       });
       showNotification(`Order placed for ${qty}x ${product.name}!`);
       setQuantities(prev => ({ ...prev, [product.id]: 1 })); // Reset qty

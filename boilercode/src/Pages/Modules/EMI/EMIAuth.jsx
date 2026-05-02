@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Phone, Mail, Lock, ArrowLeft, ShieldCheck, User, MapPin, Key, AlertCircle } from 'lucide-react';
 import '../../Auth/Auth.css';
 
+// ✅ FIX: removed /api
 const BASE_URL = "http://localhost:1010";
 
 const EMIAuth = () => {
@@ -29,15 +30,28 @@ const EMIAuth = () => {
   };
 
   const apiCall = async (url, method, body) => {
-    const res = await fetch(`${BASE_URL}${url}`, {
+    const options = {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    };
+    
+    if (method !== 'GET' && body) {
+      options.body = JSON.stringify(body);
+    }
+
+    // ✅ debug (safe)
+    console.log("API CALL:", method, `${BASE_URL}${url}`);
+
+    const res = await fetch(`${BASE_URL}${url}`, options);
+
+    if (res.status === 401) {
+      throw new Error('Invalid mobile number or password. Please try again.');
+    }
 
     let data;
     const contentType = res.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
+
+    if (contentType && contentType.includes("application/json")) {
       data = await res.json();
     } else {
       data = await res.text();
@@ -79,30 +93,40 @@ const EMIAuth = () => {
 
     try {
       if (role === 'customer') {
-        // Customer Login (Expects 'mobile'/'mobile1' due to mismatched getter/setter in backend)
-        const data = await apiCall('/customer/login', 'POST', { mobile: formData.mobile, mobile1: formData.mobile });
+
+        // ✅ FIXED URL ONLY
+        const data = await apiCall(`/customer/search/${formData.mobile}`, 'GET');
+
+        // ✅ safe check
+        if (!data || !data.id) {
+          throw new Error("Customer not found ❌");
+        }
+
         alert('Login Successful! ✅');
         localStorage.setItem('emiCustomer', JSON.stringify(data));
-        navigate(`/agent/customer`); // Redirect to Customer Dashboard
+        navigate(`/agent/customer`);
+
       } else if (showForgot) {
-        // Agent Reset Password
-        // First verify OTP if backend requires it. 
-        // Based on backend: verify-otp -> reset-password
+
         await apiCall('/agent/verify-otp', 'POST', { mobile: formData.mobile, otp: formData.otp });
         await apiCall('/agent/reset-password', 'POST', { mobile: formData.mobile, newPassword: formData.newPassword });
+
         alert('Password Reset Successful! ✅');
         setShowForgot(false);
         setIsLogin(true);
+
       } else if (isLogin) {
-        // Agent Login
+
         const data = await apiCall('/agent/login', 'POST', {
           mobile: formData.mobile,
           password: formData.password,
         });
+
         localStorage.setItem('emiAgent', JSON.stringify(data));
         navigate('/agent/admin');
+
       } else {
-        // Agent Registration
+
         await apiCall('/agent/register', 'POST', {
           name: formData.name,
           mobile: formData.mobile,
@@ -110,9 +134,11 @@ const EMIAuth = () => {
           password: formData.password,
           area: formData.area
         });
+
         alert('Registration Successful! ✅ Please Login.');
         setIsLogin(true);
       }
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -122,7 +148,9 @@ const EMIAuth = () => {
 
   const handleSendOtp = async () => {
     if (!formData.mobile) return setError("Enter mobile number first");
+
     setLoading(true);
+
     try {
       await apiCall('/agent/send-otp', 'POST', { mobile: formData.mobile });
       alert('OTP Sent Successfully! Check your SMS.');
@@ -146,29 +174,18 @@ const EMIAuth = () => {
           >
             <ArrowLeft size={18} /> Back
           </button>
+
           <div className="d-flex align-items-center gap-2 mb-2">
             <ShieldCheck size={24} className="text-black" />
             <span className="fw-bold extra-small tracking-widest text-uppercase">Secure Gateway</span>
           </div>
+
           <h2>
             {showForgot ? 'Reset Password' : (role === 'customer' ? 'Customer Login' : (isLogin ? 'Agent Login' : 'Agent Onboarding'))}
           </h2>
+
           <p>EMI & Collection Management</p>
         </div>
-
-        {!showForgot && role === 'admin' && (
-          <div className="auth-tabs">
-            <button className={isLogin ? 'active' : ''} onClick={() => setIsLogin(true)}>Login</button>
-            <button className={!isLogin ? 'active' : ''} onClick={() => setIsLogin(false)}>Join Agency</button>
-          </div>
-        )}
-
-        {role === 'customer' && !showForgot && (
-          <div className="p-3 rounded-3 bg-light-soft mb-4 border">
-            <p className="extra-small text-muted mb-1 text-uppercase fw-bold">Customer Identification</p>
-            <p className="small mb-0">Use your registered mobile to access EMI status.</p>
-          </div>
-        )}
 
         {error && (
           <div className="error-message alert alert-danger border-0 rounded-3 d-flex align-items-center gap-2 mb-4 p-2 small">
@@ -190,6 +207,7 @@ const EMIAuth = () => {
                    <button type="button" onClick={handleSendOtp} className="btn btn-black btn-sm px-3" disabled={loading}>Send OTP</button>
                 </div>
               </div>
+
               <div className="form-group">
                 <label>Verification OTP</label>
                 <div className="position-relative">
@@ -197,6 +215,7 @@ const EMIAuth = () => {
                   <input name="otp" value={formData.otp} onChange={handleChange} className="form-control ps-5" placeholder="4-digit OTP" required />
                 </div>
               </div>
+
               <div className="form-group">
                 <label>New Password</label>
                 <div className="position-relative">
@@ -224,6 +243,7 @@ const EMIAuth = () => {
                       <input name="name" value={formData.name} onChange={handleChange} className="form-control ps-5" placeholder="Your Name" required />
                     </div>
                   </div>
+
                   <div className="form-group">
                     <label>Email</label>
                     <div className="position-relative">
@@ -231,6 +251,7 @@ const EMIAuth = () => {
                       <input name="email" type="email" value={formData.email} onChange={handleChange} className="form-control ps-5" placeholder="agent@dms.com" required />
                     </div>
                   </div>
+
                   <div className="form-group mb-4">
                     <label>Service Area</label>
                     <div className="position-relative">
@@ -240,6 +261,7 @@ const EMIAuth = () => {
                   </div>
                 </>
               )}
+
               <div className="form-group">
                 <label>Mobile Number</label>
                 <div className="position-relative">
@@ -247,6 +269,7 @@ const EMIAuth = () => {
                   <input name="mobile" value={formData.mobile} onChange={handleChange} className="form-control ps-5" placeholder="Mobile Number" required />
                 </div>
               </div>
+
               <div className="form-group">
                 <label>Password</label>
                 <div className="position-relative">
@@ -254,6 +277,7 @@ const EMIAuth = () => {
                   <input type="password" name="password" value={formData.password} onChange={handleChange} className="form-control ps-5" placeholder="••••••••" required />
                 </div>
               </div>
+
               {isLogin && (
                 <p className="text-end extra-small mb-0">
                   <span className="text-primary pointer" style={{cursor: 'pointer'}} onClick={() => setShowForgot(true)}>Forgot Password?</span>
@@ -261,7 +285,7 @@ const EMIAuth = () => {
               )}
             </>
           )}
-          
+
           <button type="submit" className="auth-submit mt-4" disabled={loading}>
             {loading ? 'Processing...' : (showForgot ? 'Reset Password' : (role === 'customer' ? 'Verify & Access EMI' : (isLogin ? 'Sign In to Dashboard' : 'Join Agency')))}
           </button>

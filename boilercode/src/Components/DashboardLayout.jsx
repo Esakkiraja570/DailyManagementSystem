@@ -14,7 +14,6 @@ import {
   ShoppingBag,
   FileText,
   Droplets,
-  Calendar,
   TrendingUp
 } from 'lucide-react';
 import './DashboardLayout.css';

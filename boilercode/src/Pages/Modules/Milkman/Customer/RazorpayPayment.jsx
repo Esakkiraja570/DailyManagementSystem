@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-  CreditCard, CheckCircle, XCircle, Loader2,
+  CheckCircle, XCircle, Loader2,
   ShieldCheck, Zap, IndianRupee
 } from 'lucide-react';
+import { BASE_URL } from '../milkmanApi';
 
 const RAZORPAY_KEY = 'rzp_test_SiUZm0fwjT39g4';
-const BASE_URL = 'http://localhost:1010/api';
 
 /**
  * RazorpayPayment Component

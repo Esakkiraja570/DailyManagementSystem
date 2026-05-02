@@ -72,3 +72,67 @@ code {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-hover);
 }
+
+/* New Utilities */
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.3s ease-out forwards;
+}
+
+.modal-overlay {
+  animation: fadeInOverlay 0.3s ease-out forwards;
+}
+
+@keyframes fadeInOverlay {
+  from { background: rgba(0,0,0,0); }
+  to { background: rgba(0,0,0,0.5); }
+}
+
+.btn-black {
+  background: #000;
+  color: #fff;
+  border: none;
+  transition: all 0.3s;
+}
+
+.btn-black:hover {
+  background: #222;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.btn-outline-black {
+  background: transparent;
+  color: #000;
+  border: 1px solid #000;
+  transition: all 0.3s;
+}
+
+.btn-outline-black:hover {
+  background: #000;
+  color: #fff;
+}
+
+.extra-small {
+  font-size: 0.75rem;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
+}
+
+.pointer {
+  cursor: pointer;
+}

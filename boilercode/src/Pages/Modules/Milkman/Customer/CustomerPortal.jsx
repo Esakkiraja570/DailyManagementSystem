@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard, User, Droplet, ShoppingBag, Receipt,
   Bell, Search, ChevronRight, Plus, Minus, Package,
   CreditCard, Zap, Loader2, ClipboardList, Phone, ArrowRight
 } from 'lucide-react';
+import { BASE_URL } from '../milkmanApi';
 import BillingSummery from '../BillingSummery';
 import UpiPayment from './UpiPayment';
 import RazorpayPayment from './RazorpayPayment';
@@ -20,7 +21,7 @@ const CustomerLogin = ({ onLogin }) => {
     if (!/^\d{10}$/.test(mobile)) return setError('Enter a valid 10-digit mobile number.');
     setLoading(true); setError('');
     try {
-      const res = await fetch(`http://localhost:1010/api/customer/login/${mobile}`);
+      const res = await fetch(`${BASE_URL}/customer/login/${mobile}`);
       if (!res.ok) throw new Error('No account found for this number. Please contact your milkman.');
       const data = await res.json();
       onLogin(mobile, data);
@@ -85,39 +86,43 @@ const CustomerPortal = () => {
     { id: 3, text: 'Payment received for last month. Thank you!', time: '5d ago', unread: false },
   ]);
 
-  const fetchAll = async (mob) => {
+  const fetchAll = useCallback(async (mob) => {
     const m = mob || loggedInMobile;
     setLoading(true);
     try {
       // Skip if customerData already loaded (from login)
       let data = customerData;
       if (!data) {
-        const res = await fetch(`http://localhost:1010/api/customer/login/${m}`);
+        const res = await fetch(`${BASE_URL}/customer/login/${m}`);
         if (!res.ok) throw new Error('Not found');
         data = await res.json();
         setCustomerData(data);
       }
 
+      const ROOT_URL = BASE_URL.replace('/api', '');
       const [entryRes, prodRes, orderRes] = await Promise.all([
-        fetch(`http://localhost:1010/api/milk/${data.id}`),
-        fetch(`http://localhost:1010/api/product/milkman/${data.milkmanMobile || 'default'}`),
-        fetch(`http://localhost:1010/api/order/customer/${m}`)
+        fetch(`${BASE_URL}/milk/${data.id}`),
+        fetch(`${ROOT_URL}/product/list`),
+        fetch(`${ROOT_URL}/order/customer/${m}`) // Assuming this exists or will be added to backend
       ]);
 
       if (entryRes.ok) setEntries(await entryRes.json());
-      if (prodRes.ok) { const p = await prodRes.json(); setProducts(p.filter(x => x.promoted)); }
+      if (prodRes.ok) {
+        const p = await prodRes.json();
+        setProducts((p || []).filter(x => x.milkmanMobile === data.milkmanMobile || !x.milkmanMobile));
+      }
       if (orderRes.ok) setMyOrders(await orderRes.json());
 
       // Fetch milkman details directly using the customer's mobile number via the new endpoint
-      const mRes = await fetch(`http://localhost:1010/api/customer/milkman/${m}`);
+      const mRes = await fetch(`${BASE_URL}/customer/milkman/${m}`);
       if (mRes.ok) {
         setMilkmanDetails(await mRes.json());
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  };
+  }, [customerData, loggedInMobile]);
 
-  useEffect(() => { if (loggedInMobile) fetchAll(loggedInMobile); }, [loggedInMobile]);
+  useEffect(() => { if (loggedInMobile) fetchAll(loggedInMobile); }, [loggedInMobile, fetchAll]);
 
   const handleLogin = (mobile, data) => {
     setCustomerData(data);
@@ -127,7 +132,9 @@ const CustomerPortal = () => {
   if (!loggedInMobile) return <CustomerLogin onLogin={handleLogin} />;
 
   const totalMilkL = entries.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
-  const totalBill = entries.reduce((s, e) => s + ((parseFloat(e.total) || 0) * (parseFloat(e.price) || 60)), 0);
+  const totalMilkBill = entries.reduce((s, e) => s + ((parseFloat(e.total) || 0) * (parseFloat(e.price) || 60)), 0);
+  const totalProductBill = myOrders.filter(o => o.status !== 'REJECTED' && o.status !== 'cancelled').reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+  const totalBill = totalMilkBill + totalProductBill;
   const unreadCount = notifications.filter(n => n.unread).length;
 
   const updateQty = (id, d) => setQuantities(p => ({ ...p, [id]: Math.max(1, (p[id] || 1) + d) }));
@@ -135,9 +142,16 @@ const CustomerPortal = () => {
   const handleOrder = async (product) => {
     const qty = quantities[product.id] || 1;
     try {
-      const res = await fetch('http://localhost:1010/api/order/place', {
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      const res = await fetch(`${ROOT_URL}/order/place`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerMobile: loggedInMobile, productId: product.id, productName: product.name, quantity: qty, total: product.price * qty, milkmanMobile: product.milkmanMobile })
+        body: JSON.stringify({ 
+          productId: product.id,
+          customerMobile: loggedInMobile, 
+          quantity: qty, 
+          total: product.price * qty,
+          status: 'PENDING'
+        })
       });
       if (res.ok) { alert('Order placed! ✅'); fetchAll(); }
     } catch { alert('Order failed.'); }
@@ -481,7 +495,7 @@ const CustomerPortal = () => {
                 onSuccess={async () => {
                   try {
                     const msg = `Dear ${milkmanDetails?.name || 'Milkman'}, customer ${customerData?.name} has initiated a UPI payment of Rs.${totalBill}.`;
-                    await fetch(`http://localhost:1010/api/sms/send?mobile=${milkmanDetails?.mobile}&message=${encodeURIComponent(msg)}`, { method: 'POST' });
+                    await fetch(`${BASE_URL}/sms/send?mobile=${milkmanDetails?.mobile}&message=${encodeURIComponent(msg)}`, { method: 'POST' });
                   } catch (err) { console.error('SMS failed', err); }
                   alert('Payment notification sent to your milkman! ✅');
                 }}

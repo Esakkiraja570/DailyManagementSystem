@@ -1,34 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
-  FileText, ArrowLeft, Loader2, Printer, 
-  Droplet, Package, CreditCard, Send
+  ArrowLeft, Loader2, Printer, 
+  Droplet, Package, Send
 } from 'lucide-react';
-import './Dashboard.css';
-
+import { BASE_URL } from './milkmanApi';
 const BillingSummery = ({ customer, onBack }) => {
   const [entries, setEntries] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendingSms, setSendingSms] = useState(false);
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // e.g., "2024-05"
   const displayMonthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  useEffect(() => {
-    if (customer) {
-      fetchBillingData();
-    }
-  }, [customer]);
-
-  const fetchBillingData = async () => {
+  const fetchBillingData = useCallback(async () => {
     setLoading(true);
     try {
-      const milkRes = await axios.get(`http://localhost:1010/api/milk/${customer.id}`);
+      const milkRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
       const allEntries = milkRes.data || [];
       setEntries(allEntries);
 
-      const orderRes = await axios.get(`http://localhost:1010/api/order/customer/${customer.mobile}`);
+      const ROOT_URL = BASE_URL.replace('/api', '');
+      const orderRes = await axios.get(`${ROOT_URL}/order/customer/${customer.mobile}`);
       const allOrders = orderRes.data || [];
       setOrders(allOrders);
     } catch (err) {
@@ -36,7 +29,13 @@ const BillingSummery = ({ customer, onBack }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customer.id, customer.mobile]);
+
+  useEffect(() => {
+    if (customer) {
+      fetchBillingData();
+    }
+  }, [customer, fetchBillingData]);
 
   const totalLiters = entries.reduce((sum, e) => sum + (parseFloat(e.total) || 0), 0);
   const totalMilkCost = entries.reduce((sum, e) => sum + ((parseFloat(e.total) || 0) * (parseFloat(e.price) || customer.price || 60)), 0);
@@ -50,7 +49,7 @@ const BillingSummery = ({ customer, onBack }) => {
     setSendingSms(true);
     try {
       const message = `Dear ${customer.name}, your Executive Milk bill for ${displayMonthName} is Rs.${grandTotal.toFixed(2)}. Milk: Rs.${totalMilkCost.toFixed(2)}, Products: Rs.${totalProductCost.toFixed(2)}. Thank you!`;
-      await axios.post(`http://localhost:1010/api/sms/send?mobile=${customer.mobile}&message=${encodeURIComponent(message)}`);
+      await axios.post(`${BASE_URL}/sms/send?mobile=${customer.mobile}&message=${encodeURIComponent(message)}`);
       alert("Bill Summary sent via SMS! ✅");
     } catch (err) {
       alert("Failed to send SMS.");

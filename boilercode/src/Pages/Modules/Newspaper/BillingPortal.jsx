@@ -1,6 +1,6 @@
 import React from 'react';
 import DashboardLayout from '../../../Components/DashboardLayout';
-import { FileText, CreditCard, CheckCircle } from 'lucide-react';
+import { FileText, CheckCircle } from 'lucide-react';
 
 const BillingPortal = () => {
   return (

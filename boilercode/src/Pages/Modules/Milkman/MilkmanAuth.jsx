@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Phone, Mail, Lock, ArrowLeft, Droplets, AlertCircle, User, MapPin, Key } from 'lucide-react';
+import { Phone, Lock, ArrowLeft, Droplets, AlertCircle, User, MapPin, Key } from 'lucide-react';
 import '../../Auth/Auth.css';
 import './MilkmanAuth.css';
-
-const BASE_URL = "http://localhost:1010/api";
+import { apiPost, apiGet } from './milkmanApi';
 
 const MilkmanAuth = () => {
   const { role } = useParams();
@@ -30,27 +29,7 @@ const MilkmanAuth = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const apiCall = async (url, method, body) => {
-    const res = await fetch(`${BASE_URL}${url}`, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    let data;
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-      data = await res.json();
-    } else {
-      data = await res.text();
-    }
-
-    if (!res.ok) {
-      throw new Error(data.message || data || 'Something went wrong');
-    }
-
-    return data;
-  };
+  const apiCall = apiPost;
 
   const validate = () => {
     if (role === 'customer') {
@@ -61,8 +40,9 @@ const MilkmanAuth = () => {
       if (!formData.newPassword) return "New password required";
     } else {
       if (!formData.password) return "Password required";
-      if (!formData.mobile && !formData.email) return "Mobile or Email required";
-      
+      if (!/^[0-9]{10}$/.test(formData.mobile)) return "Enter valid 10-digit mobile number";
+      if (!isLogin && !formData.email) return "Email is required for registration";
+      if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) return "Enter a valid email address";
       if (!isLogin) {
         if (!formData.name) return "Name is required";
         if (!formData.area) return "Please select a service area";
@@ -82,13 +62,15 @@ const MilkmanAuth = () => {
 
     try {
       if (role === 'customer') {
-        // Customer OTP Login
-        await apiCall('/milkman/send-otp', 'POST', { mobile: formData.mobile });
-        alert('OTP Sent! Redirecting to customer portal...');
+        // Customer Direct Login
+        const data = await apiGet(`/customer/login/${formData.mobile}`);
+        localStorage.setItem('customerData', JSON.stringify(data));
+        localStorage.setItem('customerMobile', formData.mobile);
+        alert('Login Successful! Welcome to your Portal.');
         navigate(`/milkman/customer?mobile=${formData.mobile}`);
       } else if (showForgot) {
         // Reset Password flow
-        await apiCall('/milkman/reset-password', 'POST', {
+        await apiCall('/milkman/reset-password', {
           mobile: formData.mobile,
           otp: formData.otp,
           newPassword: formData.newPassword
@@ -98,15 +80,16 @@ const MilkmanAuth = () => {
         setIsLogin(true);
       } else if (isLogin) {
         // Admin Login
-        const data = await apiCall('/milkman/login', 'POST', {
-          mobile: formData.mobile || formData.email,
+        const data = await apiCall('/milkman/login', {
+          mobile: formData.mobile,
           password: formData.password,
         });
         localStorage.setItem('milkman', JSON.stringify(data));
+        localStorage.setItem('milkmanMobile', data.mobile);
         navigate('/milkman/admin');
       } else {
         // Admin Registration
-        await apiCall('/milkman/register', 'POST', {
+        await apiCall('/milkman/register', {
           name: formData.name,
           mobile: formData.mobile,
           email: formData.email,
@@ -127,7 +110,7 @@ const MilkmanAuth = () => {
     if (!formData.mobile) return setError("Enter mobile number first");
     setLoading(true);
     try {
-      await apiCall('/milkman/send-otp', 'POST', { mobile: formData.mobile });
+      await apiCall('/milkman/send-otp', { mobile: formData.mobile });
       alert('OTP Sent Successfully! Check your console/SMS.');
     } catch (err) {
       setError(err.message);
@@ -251,20 +234,45 @@ const MilkmanAuth = () => {
                   </div>
                 </>
               )}
-              <div className="form-group">
-                <label>Mobile / Email</label>
-                <div className="position-relative">
-                  <Phone className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
-                  <input name="mobile" value={formData.mobile} onChange={handleChange} className="form-control ps-5" placeholder="Entry ID" required />
+                      <div className="form-group">
+                  <label>Mobile Number</label>
+                  <div className="position-relative">
+                    <Phone className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
+                    <input
+                      type="tel"
+                      name="mobile"
+                      value={formData.mobile}
+                      onChange={handleChange}
+                      className="form-control ps-5"
+                      placeholder="10-digit mobile number"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <div className="position-relative">
-                  <Lock className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
-                  <input type="password" name="password" value={formData.password} onChange={handleChange} className="form-control ps-5" placeholder="••••••••" required />
+                {!isLogin && (
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <div className="position-relative">
+                      <User className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="form-control ps-5"
+                        placeholder="you@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Password</label>
+                  <div className="position-relative">
+                    <Lock className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
+                    <input type="password" name="password" value={formData.password} onChange={handleChange} className="form-control ps-5" placeholder="••••••••" required />
+                  </div>
                 </div>
-              </div>
               {isLogin && (
                 <p className="text-end extra-small mb-0">
                   <span className="text-primary pointer" onClick={() => setShowForgot(true)}>Forgot Password?</span>

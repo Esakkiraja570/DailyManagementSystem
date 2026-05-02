@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   LayoutDashboard, Users, Box, ShoppingCart, Receipt, Plus, Settings,
   HelpCircle, Search, Bell, History, Droplet, UserCheck, ClipboardList,
   Wallet, ChevronRight, TrendingUp, ArrowLeft, Loader2
 } from 'lucide-react';
+import { BASE_URL, getMilkmanMobile } from './milkmanApi';
 import AddCustomers from './AddCustomers';
 import NewProducts from './NewProducts';
 import AddEntry from './AddEntry';
@@ -18,22 +19,20 @@ const MilkmanDashboard = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalMilk: '0L', customers: 0, revenue: '₹0' });
+  const milkmanMobile = getMilkmanMobile();
 
-  // Fetch mobile number from the milkman object saved during Auth, or fallback to 'mobile' string
-  const storedMilkman = JSON.parse(localStorage.getItem('milkman') || '{}');
-  const mobile = storedMilkman?.mobile || localStorage.getItem("mobile");
+  const fetchDashboardData = useCallback(async () => {
+    if (!milkmanMobile) {
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const profileRes = await axios.get(`http://localhost:1010/api/milkman/me/${mobile}`);
+      const profileRes = await axios.get(`${BASE_URL}/milkman/me/${milkmanMobile}`);
       setMilkmanData(profileRes.data);
 
-      const custRes = await axios.get(`http://localhost:1010/api/customer/my/${mobile}`);
+      const custRes = await axios.get(`${BASE_URL}/customer/my/${milkmanMobile}`);
       const custList = custRes.data || [];
       setCustomers(custList);
 
@@ -47,7 +46,11 @@ const MilkmanDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [milkmanMobile]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const renderOverview = () => (
     <div className="animate-fade-in">
@@ -146,7 +149,7 @@ const MilkmanDashboard = () => {
     e.preventDefault();
     setUpdatingPrice(true);
     try {
-      await axios.put(`http://localhost:1010/api/milkman/update-price/${mobile}?price=${newPrice}`);
+      await axios.put(`${BASE_URL}/milkman/update-price/${milkmanMobile}?price=${newPrice}`);
       alert("Market rate updated successfully! ✅");
       fetchDashboardData();
     } catch (err) {
