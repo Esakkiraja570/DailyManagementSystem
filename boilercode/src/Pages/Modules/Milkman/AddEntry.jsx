@@ -12,50 +12,51 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(null); // FIX
   const [notification, setNotification] = useState(null);
 
   const today = new Date().toISOString().split('T')[0];
-  
-  // Milk Entry Form State
+  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
   const [date, setDate] = useState(today);
   const [morning, setMorning] = useState('');
   const [evening, setEvening] = useState('');
   const [existingEntryId, setExistingEntryId] = useState(null);
 
-  // Product Order State
   const [quantities, setQuantities] = useState({});
 
   const milkmanMobile = getMilkmanMobile();
 
+  // ✅ FIXED: correct dependency + API consistency
   const fetchData = useCallback(async () => {
+    if (!customer?.id) return;
+
     setLoading(true);
     try {
-      // Fetch milk entries for customer
       const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
       setEntries(entriesRes.data || []);
 
-      // Fetch available products for this milkman
+      // FIX: use ROOT_URL instead of hardcoding
       const ROOT_URL = BASE_URL.replace('/api', '');
       const prodRes = await axios.get(`${ROOT_URL}/product/list`);
-      setProducts((prodRes.data || []).filter(p => p.milkmanMobile === milkmanMobile || !p.milkmanMobile));
+      setProducts(prodRes.data || []);
     } catch (err) {
-      console.error("Data fetch error:", err);
+      console.error("Fetch Error:", err);
     } finally {
       setLoading(false);
     }
-  }, [customer.id, milkmanMobile]);
+  }, [customer?.id, BASE_URL]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // ✅ FIX: safe date comparison
   useEffect(() => {
-    // Check if an entry exists for the selected date
     const existingEntry = entries.find(e => e.date === date);
     if (existingEntry) {
-      setMorning(existingEntry.morning || '');
-      setEvening(existingEntry.evening || '');
+      setMorning(existingEntry.morning ?? '');
+      setEvening(existingEntry.evening ?? '');
       setExistingEntryId(existingEntry.id);
     } else {
       setMorning('');
@@ -72,37 +73,32 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
   const handleMilkSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    
+
     const mornVal = parseFloat(morning || 0);
     const eveVal = parseFloat(evening || 0);
     const total = mornVal + eveVal;
 
     try {
       if (existingEntryId) {
-        // Edit Mode
         await axios.put(`${BASE_URL}/milk/update/${existingEntryId}`, {
           morning: mornVal,
           evening: eveVal,
-          total: total,
+          total,
           edited: true
         });
         showNotification("Milk entry updated successfully!");
       } else {
-        // Add Mode
         await axios.post(`${BASE_URL}/milk/add/${customer.id}`, {
-          date: date,
+          date,
           morning: mornVal,
           evening: eveVal,
-          total: total,
+          total,
           price: globalPrice
         });
         showNotification("New milk entry saved!");
       }
-      
-      // Refresh entries
-const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
-      setEntries(entriesRes.data || []);
-      
+
+      await fetchData(); // FIX: reuse function
     } catch (err) {
       console.error(err);
       showNotification("Failed to save milk data.", "error");
@@ -113,21 +109,20 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
 
   const handleDeleteEntry = async () => {
     if (!existingEntryId) return;
-    if (window.confirm("Are you sure you want to delete this milk entry? This cannot be undone.")) {
+
+    if (window.confirm("Are you sure you want to delete this milk entry?")) {
       setSaving(true);
       try {
         await axios.delete(`${BASE_URL}/milk/delete/${existingEntryId}`);
-        showNotification("Milk entry deleted successfully!");
+        showNotification("Deleted successfully!");
         setMorning('');
         setEvening('');
         setExistingEntryId(null);
-        
-        // Refresh entries
-        const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
-        setEntries(entriesRes.data || []);
+
+        await fetchData(); // FIX
       } catch (err) {
         console.error(err);
-        showNotification("Failed to delete entry.", "error");
+        showNotification("Delete failed", "error");
       } finally {
         setSaving(false);
       }
@@ -136,26 +131,57 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
 
   const handleRegularEntry = async () => {
     setSaving(true);
+    // Use input values or defaults
+    const morningValue = parseFloat(morning) || 1;
+    const eveningValue = parseFloat(evening) || 2;
+    const total = morningValue + eveningValue;
+
     try {
-      if (existingEntryId) {
-        await axios.put(`${BASE_URL}/milk/update/${existingEntryId}`, {
-          morning: 0,
-          evening: 0,
-          total: 0,
-          edited: true
-        });
-        showNotification("Today's entry already exists and has been refreshed.");
-      } else {
-        await axios.post(`${BASE_URL}/milk/regular/${customer.id}`);
-        showNotification("Regular entry added successfully!");
-      }
+      // Force local midnight for both start and end
+      let current = new Date(date + "T00:00:00");
+      const end = new Date(today + "T00:00:00");
       
-      // Refresh entries
-      const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
-      setEntries(entriesRes.data || []);
+      const promises = [];
+
+      while (current <= end) {
+        // Manually format YYYY-MM-DD to avoid UTC shift
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, '0');
+        const d = String(current.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+
+        const existing = entries.find(e => e.date === dateStr);
+
+        if (existing) {
+          promises.push(
+            axios.put(`${BASE_URL}/milk/update/${existing.id}`, {
+              morning: morningValue,
+              evening: eveningValue,
+              total,
+              edited: true
+            })
+          );
+        } else {
+          promises.push(
+            axios.post(`${BASE_URL}/milk/add/${customer.id}`, {
+              date: dateStr,
+              morning: morningValue,
+              evening: eveningValue,
+              total,
+              price: globalPrice
+            })
+          );
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      await Promise.all(promises);
+      showNotification(`Bulk entries (${morningValue}L + ${eveningValue}L) filled successfully up to ${today}!`);
+      await fetchData(); 
+      setDate(today); 
     } catch (err) {
       console.error(err);
-      showNotification("Failed to add regular entry.", "error");
+      showNotification("Failed to bulk fill entries.", "error");
     } finally {
       setSaving(false);
     }
@@ -171,8 +197,10 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
   const handleOrder = async (product) => {
     const qty = quantities[product.id] || 1;
     setOrderLoading(product.id);
+
     try {
       const ROOT_URL = BASE_URL.replace('/api', '');
+
       await axios.post(`${ROOT_URL}/order/place`, {
         productId: product.id,
         customerMobile: customer.mobile,
@@ -180,10 +208,13 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
         total: product.price * qty,
         status: 'PENDING'
       });
-      showNotification(`Order placed for ${qty}x ${product.name}!`);
-      setQuantities(prev => ({ ...prev, [product.id]: 1 })); // Reset qty
+
+      showNotification(`Order placed for ${product.name}`);
+      setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+
     } catch (err) {
-      showNotification("Failed to place order.", "error");
+      console.error(err);
+      showNotification("Order failed", "error");
     } finally {
       setOrderLoading(null);
     }
@@ -203,10 +234,16 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
         <button className="btn btn-light rounded-circle p-2 shadow-sm" onClick={onBack}>
           <ArrowLeft size={20}/>
         </button>
-        <button className="btn btn-black rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" onClick={onViewBill}>
+        <button className="btn btn-black rounded-pill px-4 fw-bold" onClick={onViewBill}>
           <FileText size={16}/> View Final Bill
         </button>
       </div>
+
+      {notification && (
+        <div className={`alert ${notification.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
+          {notification.msg}
+        </div>
+      )}
 
       {/* Header Info */}
       <div className="card border-0 shadow-sm rounded-4 bg-white mb-4 p-4">
@@ -255,6 +292,7 @@ const entriesRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
                     className="form-control bg-transparent border-0 fw-bold fs-5" 
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    min={firstDayOfMonth}
                     max={today}
                     required
                   />

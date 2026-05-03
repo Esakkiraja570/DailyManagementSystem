@@ -5,9 +5,11 @@ import {
   Droplet, Package, Send
 } from 'lucide-react';
 import { BASE_URL } from './milkmanApi';
+
 const BillingSummery = ({ customer, onBack }) => {
   const [entries, setEntries] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendingSms, setSendingSms] = useState(false);
 
@@ -16,14 +18,17 @@ const BillingSummery = ({ customer, onBack }) => {
   const fetchBillingData = useCallback(async () => {
     setLoading(true);
     try {
-      const milkRes = await axios.get(`${BASE_URL}/milk/${customer.id}`);
-      const allEntries = milkRes.data || [];
-      setEntries(allEntries);
-
       const ROOT_URL = BASE_URL.replace('/api', '');
-      const orderRes = await axios.get(`${ROOT_URL}/order/customer/${customer.mobile}`);
-      const allOrders = orderRes.data || [];
-      setOrders(allOrders);
+
+      const [milkRes, orderRes, prodRes] = await Promise.all([
+        axios.get(`${BASE_URL}/milk/${customer.id}`),
+        axios.get(`${ROOT_URL}/order/customer/${customer.mobile}`),
+        axios.get(`${ROOT_URL}/product/list`)
+      ]);
+
+      setEntries(milkRes.data || []);
+      setOrders(orderRes.data || []);
+      setProducts(prodRes.data || []);
     } catch (err) {
       console.error("Error fetching billing data:", err);
     } finally {
@@ -32,27 +37,66 @@ const BillingSummery = ({ customer, onBack }) => {
   }, [customer.id, customer.mobile]);
 
   useEffect(() => {
-    if (customer) {
-      fetchBillingData();
-    }
+    if (customer) fetchBillingData();
   }, [customer, fetchBillingData]);
 
-  const totalLiters = entries.reduce((sum, e) => sum + (parseFloat(e.total) || 0), 0);
-  const totalMilkCost = entries.reduce((sum, e) => sum + ((parseFloat(e.total) || 0) * (parseFloat(e.price) || customer.price || 60)), 0);
-  
-  const validOrders = orders.filter(o => o.status !== 'cancelled');
-  const totalProductCost = validOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-  
-  const grandTotal = totalMilkCost + totalProductCost;
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  // Get unit price: prefer product catalog, fallback to stored unitPrice, then total/qty
+  const getUnitPrice = (o) => {
+    const prod = products.find(p => p.id === o.productId || p.name === o.productName);
+    if (prod && prod.price > 0) return parseFloat(prod.price);
+    if (o.unitPrice && parseFloat(o.unitPrice) > 0) return parseFloat(o.unitPrice);
+    const t = parseFloat(o.total);
+    const q = parseFloat(o.quantity) || 1;
+    if (!isNaN(t) && t > 0) return t / q;
+    return 0;
+  };
+
+  const getLineTotal = (o) => getUnitPrice(o) * (parseFloat(o.quantity) || 1);
+
+  const filteredEntries = entries.filter(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).sort((a, b) => new Date(a.date + 'T00:00:00') - new Date(b.date + 'T00:00:00'));
+
+  const filteredOrders = orders.filter(o => {
+    if (o.status !== 'DELIVERED') return false;
+    if (!o.date) return true;
+    const raw = o.date.includes('T') ? o.date : o.date + 'T00:00:00';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return true;
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const totalLiters    = filteredEntries.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
+  const totalMilkCost  = filteredEntries.reduce((s, e) => s + ((parseFloat(e.total) || 0) * (parseFloat(e.price) || customer.price || 60)), 0);
+  const totalProductCost = filteredOrders.reduce((s, o) => s + getLineTotal(o), 0);
+  const grandTotal     = totalMilkCost + totalProductCost;
 
   const handleSendSms = async () => {
     setSendingSms(true);
     try {
-      const message = `Dear ${customer.name}, your Executive Milk bill for ${displayMonthName} is Rs.${grandTotal.toFixed(2)}. Milk: Rs.${totalMilkCost.toFixed(2)}, Products: Rs.${totalProductCost.toFixed(2)}. Thank you!`;
+      // Build a detailed, professional SMS bill summary
+      const productLine = totalProductCost > 0
+        ? ` | Products (${filteredOrders.length} items): Rs.${totalProductCost.toFixed(2)}`
+        : '';
+      const message =
+        `*Executive Milk - Monthly Bill*\n` +
+        `Customer: ${customer.name}\n` +
+        `Month: ${displayMonthName}\n` +
+        `----------------------------\n` +
+        `Milk (${totalLiters.toFixed(1)}L): Rs.${totalMilkCost.toFixed(2)}${productLine}\n` +
+        `----------------------------\n` +
+        `*GRAND TOTAL: Rs.${grandTotal.toFixed(2)}*\n` +
+        `Please pay at your earliest convenience. Thank you!`;
+
       await axios.post(`${BASE_URL}/sms/send?mobile=${customer.mobile}&message=${encodeURIComponent(message)}`);
-      alert("Bill Summary sent via SMS! ✅");
+      alert('Bill Summary sent via SMS! ✅');
     } catch (err) {
-      alert("Failed to send SMS.");
+      alert('Failed to send SMS. Please try again.');
       console.error(err);
     } finally {
       setSendingSms(false);
@@ -134,7 +178,7 @@ const BillingSummery = ({ customer, onBack }) => {
                 </tr>
               </thead>
               <tbody>
-                {entries.length > 0 ? entries.map((e, i) => (
+                {filteredEntries.length > 0 ? filteredEntries.map((e, i) => (
                   <tr key={i}>
                     <td className="fw-bold small">{e.date}</td>
                     <td className="text-center">{e.morning || 0}L</td>
@@ -168,28 +212,38 @@ const BillingSummery = ({ customer, onBack }) => {
                 <tr className="small text-uppercase text-muted">
                   <th>Date</th>
                   <th>Item Description</th>
+                  <th className="text-center">Unit Price (₹)</th>
                   <th className="text-center">Qty</th>
                   <th className="text-end">Amount (₹)</th>
                 </tr>
               </thead>
-              <tbody>
-                {validOrders.length > 0 ? validOrders.map((o, i) => (
-                  <tr key={i}>
-                    <td className="small">{o.date}</td>
-                    <td className="fw-bold">{o.productName}</td>
-                    <td className="text-center">{o.quantity}</td>
-                    <td className="text-end">{(o.total).toFixed(2)}</td>
+                <tbody>
+                  {filteredOrders.length > 0 ? filteredOrders.map((o, i) => {
+                    const qty     = parseFloat(o.quantity) || 1;
+                    const uPrice  = getUnitPrice(o);
+                    const lTotal  = getLineTotal(o);
+                    return (
+                    <tr key={i}>
+                      <td className="small text-muted">{o.date || 'This Month'}</td>
+                      <td>
+                        <div className="fw-bold">{o.productName}</div>
+                        <small className="text-muted extra-small">Delivered ✓</small>
+                      </td>
+                      <td className="text-center">₹{uPrice.toFixed(2)}</td>
+                      <td className="text-center fw-bold">{qty}</td>
+                      <td className="text-end fw-bold text-success">₹{lTotal.toFixed(2)}</td>
+                    </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan="5" className="text-center py-4 text-muted small">No additional products purchased this month.</td></tr>
+                  )}
+                </tbody>
+                <tfoot className="bg-light fw-bold">
+                  <tr>
+                    <td colSpan="3" className="text-end">Products Subtotal ({filteredOrders.reduce((s,o)=>s+(parseFloat(o.quantity)||0),0)} items):</td>
+                    <td className="text-end text-success fw-bold" colSpan="2">₹{totalProductCost.toFixed(2)}</td>
                   </tr>
-                )) : (
-                  <tr><td colSpan="4" className="text-center py-3 text-muted small">No product purchases this month.</td></tr>
-                )}
-              </tbody>
-              <tfoot className="bg-light fw-bold">
-                <tr>
-                  <td colSpan="3" className="text-end">Products Subtotal:</td>
-                  <td className="text-end text-success">₹{totalProductCost.toFixed(2)}</td>
-                </tr>
-              </tfoot>
+                </tfoot>
             </table>
           </div>
         </div>
