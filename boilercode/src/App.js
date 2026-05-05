@@ -11,8 +11,8 @@ import MilkmanDashboard from './Pages/Modules/Milkman/MilkmanDashboard';
 import MilkmanCustomerPortal from './Pages/Modules/Milkman/Customer/CustomerPortal';
 import NewspaperDashboard from './Pages/Modules/Newspaper/NewspaperDashboard';
 import NewspaperBillingPortal from './Pages/Modules/Newspaper/BillingPortal';
-import AgentDashboard from './Pages/Modules/EMI/AgentDashboard';
-import CustomerPayment from './Pages/Modules/EMI/EmiCustomer/CustomerPayment';
+import EmiAgentDashboard from './MainComponents/EmiAgent/EmiMain/EmiAgentDashboard';
+import EmiCustomerDashboard from './MainComponents/EmiAgent/EmiMain/EmiCustomerDashboard';
 import ShopDashboard from './Pages/Modules/SmallShop/ShopDashboard';
 
 // Simple Dashboard Components to make it look "Real"
@@ -60,8 +60,8 @@ function App() {
         <Route path="/milkman/admin" element={<MilkmanDashboard />} />
         <Route path="/milkman/customer" element={<MilkmanCustomerPortal />} />
 
-        <Route path="/agent/admin" element={<AgentDashboard />} />
-        <Route path="/agent/customer" element={<CustomerPayment />} />
+        <Route path="/agent/admin" element={<EmiAgentDashboard />} />
+        <Route path="/agent/customer" element={<EmiCustomerDashboard />} />
 
         <Route path="/distributor/admin" element={<NewspaperDashboard />} />
         <Route path="/distributor/customer" element={<NewspaperBillingPortal />} />

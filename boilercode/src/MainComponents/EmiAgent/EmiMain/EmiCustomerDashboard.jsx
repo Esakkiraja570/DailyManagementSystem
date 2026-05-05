@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  CreditCard, Loader2, PieChart, Calendar, History, LogOut
-} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  CreditCard, Loader2, PieChart, Calendar, History, 
+  LogOut, Download, AlertTriangle, CheckCircle, 
+  ArrowRight, ShieldCheck, Info, Clock
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import './EmiCustomerDashboard.css';
 
@@ -12,25 +14,25 @@ const EmiCustomerDashboard = () => {
   const [customer, setCustomer] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [schedule, setSchedule] = useState([]);
+  const [totalPayable, setTotalPayable] = useState({ emiAmount: 0, lateFee: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
-  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
-  // ================= FETCH =================
+  // ================= FETCH DATA =================
   const fetchData = useCallback(async (id) => {
     try {
       setLoading(true);
-
-      const [custRes, histRes, schedRes] = await Promise.all([
+      const [custRes, histRes, schedRes, totalRes] = await Promise.all([
         fetch(`${BASE_URL}/customer/${id}`),
         fetch(`${BASE_URL}/payment/history/${id}`),
-        fetch(`${BASE_URL}/schedule/customer/${id}`)
+        fetch(`${BASE_URL}/schedule/customer/${id}`),
+        fetch(`${BASE_URL}/payment/total/${id}`)
       ]);
 
-      if (!custRes.ok) throw new Error("Customer fetch failed");
+      if (!custRes.ok) throw new Error("Sync failed");
 
       const cust = await custRes.json();
       setCustomer(cust);
@@ -38,10 +40,10 @@ const EmiCustomerDashboard = () => {
 
       setPaymentHistory(histRes.ok ? await histRes.json() : []);
       setSchedule(schedRes.ok ? await schedRes.json() : []);
-
+      setTotalPayable(totalRes.ok ? await totalRes.json() : { total: 0 });
+      
     } catch (err) {
       console.error(err);
-      setError("⚠️ Backend not reachable");
     } finally {
       setLoading(false);
     }
@@ -49,216 +51,180 @@ const EmiCustomerDashboard = () => {
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('emiCustomer') || 'null');
-
     if (!stored) {
       navigate('/auth/agent/customer/login');
       return;
     }
-
     fetchData(stored.id);
   }, [fetchData, navigate]);
 
-  // ================= LOAD RAZORPAY =================
+  // ================= RAZORPAY INTEGRATION =================
   const loadRazorpay = () => {
     return new Promise((resolve) => {
       if (window.Razorpay) return resolve(true);
-
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
-
       document.body.appendChild(script);
     });
   };
 
-  // ================= PAYMENT =================
   const handlePayEMI = async () => {
     try {
-      if (!customer?.emiAmount) {
-        alert("❌ EMI amount missing");
-        return;
-      }
-
       setPaying(true);
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) throw new Error("Razorpay failed to load");
 
-      console.log("Loading Razorpay...");
-      const loaded = await loadRazorpay();
-
-      if (!loaded) throw new Error("Razorpay SDK failed");
-
-      console.log("Creating order...");
-      const orderRes = await fetch(`${BASE_URL}/payment/create-order/${customer.id}`, {
-        method: "POST"
-      });
-
+      // 1. Create Order on Backend (matches /payment/create-order/{id})
+      const orderRes = await fetch(`${BASE_URL}/payment/create-order/${customer.id}`, { method: "POST" });
       const order = await orderRes.json();
-      console.log("Order:", order);
-
+      
       if (!order.id) throw new Error("Order creation failed");
 
       const options = {
-        key: "rzp_test_SiUZm0fwjT39g4",
+        key: "rzp_test_SiUZm0fwjT39g4", // 👈 Enter your Razorpay Key ID here
         amount: order.amount,
         currency: "INR",
-        name: "DMS EMI",
-        description: "EMI Payment",
+        name: "DMS ENTERPRISE",
+        description: `EMI Payment for ${customer.productName || 'Loan'}`,
         order_id: order.id,
-
-        // 🔥 FIXED HANDLER
-        handler: async function (response) {
-          console.log("PAYMENT SUCCESS:", response);
+        handler: async (response) => {
           await verifyPayment(response);
         },
-
         prefill: {
           name: customer.name,
           contact: customer.mobile
         },
-
-        theme: { color: "#000" }
+        theme: { color: "#000000" }
       };
 
       const rzp = new window.Razorpay(options);
-
-      rzp.on("payment.failed", function (resp) {
-        console.error(resp);
-        alert("❌ Payment Failed: " + resp.error.description);
-      });
-
       rzp.open();
-
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      alert("Payment Error: " + err.message);
     } finally {
       setPaying(false);
     }
   };
 
-  // ================= VERIFY =================
-  const verifyPayment = async (response) => {
+  const verifyPayment = async (razorResponse) => {
     try {
-      const total = customer.emiAmount + (customer.lateFee || 0);
+      // ✅ Matches @RequestBody Map<String, Object> in your Java Controller
+      const payload = {
+        amount: totalPayable.total,
+        mode: "ONLINE",
+        razorpayOrderId: razorResponse.razorpay_order_id,
+        razorpayPaymentId: razorResponse.razorpay_payment_id,
+        razorpaySignature: razorResponse.razorpay_signature
+      };
 
-      console.log("Verifying payment...");
+      const res = await fetch(`${BASE_URL}/payment/verify/${customer.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      const res = await fetch(
-        `${BASE_URL}/payment/verify/${customer.id}?amount=${total}&mode=ONLINE`,
-        { method: "POST" }
-      );
+      if (!res.ok) throw new Error("Verification Failed");
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      alert("✅ Payment Successful");
-      fetchData(customer.id);
-
+      alert("✅ Payment Successful! Dashboard updated.");
+      fetchData(customer.id); // Refresh data
     } catch (err) {
-      console.error(err);
-      alert("❌ Verification Failed");
+      alert("❌ Verification Error: " + err.message);
     }
   };
 
-  // ================= LOGOUT =================
-  const logout = () => {
-    localStorage.removeItem("emiCustomer");
-    navigate('/auth/agent/customer/login');
-  };
-
-  // ================= PDF =================
+  // ================= PDF & LOGOUT =================
   const generateBill = () => {
     const doc = new jsPDF();
-
-    doc.text("EMI RECEIPT", 80, 20);
-    doc.text(`Name: ${customer?.name}`, 20, 40);
-    doc.text(`Balance: ₹${customer?.balance}`, 20, 50);
-
-    doc.save("receipt.pdf");
+    doc.text("DMS ENTERPRISE - RECEIPT", 105, 20, null, null, "center");
+    doc.text(`Customer: ${customer.name}`, 20, 40);
+    doc.text(`Total Paid: INR ${customer.totalPaid}`, 20, 50);
+    doc.text(`Outstanding: INR ${customer.balance}`, 20, 60);
+    doc.save(`Receipt_${customer.name}.pdf`);
   };
 
-  if (loading) {
-    return (
-      <div className="loader">
-        <Loader2 className="spin" />
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) return <div className="error-box">{error}</div>;
+  if (loading) return <div className="p-5 text-center"><Loader2 className="animate-spin" /></div>;
 
   const progress = ((customer.totalPaid / customer.totalAmount) * 100 || 0).toFixed(1);
 
   return (
-    <div className="container">
+    <div className="dashboard-wrapper">
+      <nav className="dashboard-sidebar">
+        <div className="sidebar-brand"><ShieldCheck /> <span>DMS PAY</span></div>
+        <div className="sidebar-menu">
+          <button className={activeTab === 'summary' ? 'active' : ''} onClick={() => setActiveTab('summary')}><PieChart /> Dashboard</button>
+          <button className={activeTab === 'schedule' ? 'active' : ''} onClick={() => setActiveTab('schedule')}><Calendar /> Schedule</button>
+          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}><History /> Transactions</button>
+        </div>
+        <button className="logout-btn" onClick={() => navigate('/auth/agent/customer/login')}><LogOut /> Logout</button>
+      </nav>
 
-      {/* SIDEBAR */}
-      <aside className="sidebar">
-        <h2>EMI Portal</h2>
-
-        <button onClick={() => setActiveTab('summary')}>
-          <PieChart /> Summary
-        </button>
-
-        <button onClick={() => setActiveTab('schedule')}>
-          <Calendar /> Schedule
-        </button>
-
-        <button onClick={() => setActiveTab('history')}>
-          <History /> History
-        </button>
-
-        <button className="logout" onClick={logout}>
-          <LogOut /> Logout
-        </button>
-      </aside>
-
-      {/* MAIN */}
-      <main className="main">
-        <h1>Welcome, {customer.name}</h1>
+      <main className="dashboard-main">
+        <header className="main-header">
+          <div><h2>Welcome, {customer.name}</h2><p className="text-muted small">ID: #EMI-{customer.id}</p></div>
+          <span className={`status-badge ${customer.status.toLowerCase()}`}>{customer.status}</span>
+        </header>
 
         {activeTab === 'summary' && (
-          <div className="card">
-            <h2>Outstanding</h2>
-            <h1>₹{customer.balance + (customer.lateFee || 0)}</h1>
-
-            <p>Progress: {progress}%</p>
-
-            <button className="pay-btn" onClick={handlePayEMI} disabled={paying}>
-              {paying ? <Loader2 className="spin" /> : <CreditCard />}
-              Pay EMI
-            </button>
-
-            <button onClick={generateBill}>Download Receipt</button>
+          <div className="animate-fade-in">
+            <div className="row g-4">
+              <div className="col-md-8">
+                <div className="stats-card balance-card">
+                  <p className="label">Current Payable Amount</p>
+                  <h1 className="amount">₹{totalPayable.total?.toLocaleString()}</h1>
+                  <div className="details">
+                    <span>EMI: ₹{totalPayable.emiAmount}</span>
+                    {totalPayable.lateFee > 0 && <span className="text-warning ms-2">+ Late Fee: ₹{totalPayable.lateFee}</span>}
+                  </div>
+                  <div className="actions mt-4">
+                    <button className="btn-pay" onClick={handlePayEMI} disabled={paying || customer.balance <= 0}>
+                      {paying ? <Loader2 className="animate-spin" /> : <CreditCard size={18} />}
+                      {customer.balance <= 0 ? 'Loan Completed' : 'Pay Now'}
+                    </button>
+                    <button className="btn-download" onClick={generateBill}><Download size={18} /> Receipt</button>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="stats-card progress-card text-center">
+                  <h5>Loan Progress</h5>
+                  <h2 className="progress-text text-primary">{progress}%</h2>
+                  <div className="progress mt-3"><div className="progress-bar" style={{width: `${progress}%`}}></div></div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {activeTab === 'schedule' && (
-          <div className="list">
-            {schedule.map(s => (
-              <div key={s.id} className="list-item">
-                <span>#{s.installmentNo}</span>
-                <span>₹{s.emiAmount}</span>
-                <span>{s.status}</span>
-              </div>
-            ))}
-          </div>
+           <div className="list-container mt-4 glass-card p-4">
+             <table className="table">
+               <thead><tr><th>Installment</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+               <tbody>
+                 {schedule.map(s => (
+                   <tr key={s.id}>
+                     <td>#{s.installmentNo}</td>
+                     <td>₹{s.emiAmount}</td>
+                     <td>{new Date(s.dueDate).toLocaleDateString()}</td>
+                     <td><span className={`badge-status ${s.status.toLowerCase()}`}>{s.status}</span></td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
         )}
 
         {activeTab === 'history' && (
-          <div className="list">
-            {paymentHistory.map(p => (
-              <div key={p.id} className="list-item success">
-                <span>{new Date(p.paidDate).toLocaleDateString()}</span>
-                <span>₹{p.amountPaid}</span>
-              </div>
-            ))}
-          </div>
+           <div className="list-container mt-4 glass-card p-4">
+             {paymentHistory.map(p => (
+               <div key={p.id} className="transaction-item d-flex justify-content-between p-3 border-bottom">
+                 <div><h6 className="mb-0">₹{p.amountPaid}</h6><small>{new Date(p.paidDate).toLocaleString()}</small></div>
+                 <span className="method-tag px-2 py-1 bg-light rounded">{p.paymentMode}</span>
+               </div>
+             ))}
+           </div>
         )}
-
       </main>
     </div>
   );

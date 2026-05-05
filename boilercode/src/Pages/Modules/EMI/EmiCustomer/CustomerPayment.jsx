@@ -106,7 +106,7 @@ const CustomerPayment = () => {
     <div className="cust-error-state">
       <AlertCircle size={64} />
       <h2>Session Expired</h2>
-      <button onClick={() => window.location.href='/auth/agent/customer/login'}>Log In Again</button>
+      <button onClick={() => window.location.href='/auth/agent/customer'}>Log In Again</button>
     </div>
   );
 

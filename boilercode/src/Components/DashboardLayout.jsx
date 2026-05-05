@@ -79,9 +79,9 @@ const DashboardLayout = ({ children, title, moduleName, role }) => {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="avatar" style={{ background: '#000', color: '#fff' }}>
-            {moduleName.charAt(0).toUpperCase()}
+            {moduleName ? moduleName.charAt(0).toUpperCase() : 'D'}
           </div>
-          <span>{moduleName.toUpperCase()}</span>
+          <span>{moduleName ? moduleName.toUpperCase() : 'DMS'}</span>
         </div>
 
         <nav className="sidebar-nav">
