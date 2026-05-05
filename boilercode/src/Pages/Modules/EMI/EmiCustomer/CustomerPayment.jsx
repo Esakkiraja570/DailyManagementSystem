@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../../../../Components/DashboardLayout';
 import { 
   CreditCard, ShieldCheck, History, Loader2, CheckCircle, AlertCircle, 
-  Download, Receipt, TrendingUp, Calendar, AlertTriangle
+  Download, Receipt, TrendingUp, Calendar, AlertTriangle, ChevronRight,
+  Wallet, ArrowRight, Smartphone, Clock, PieChart
 } from 'lucide-react';
 import jsPDF from 'jspdf';
+import './CustomerPayment.css';
 
 const BASE_URL = "http://localhost:1010";
 
-// Dynamically load Razorpay SDK
 const loadRazorpay = () => {
   return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
+    if (window.Razorpay) { resolve(true); return; }
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = () => resolve(true);
@@ -26,351 +24,221 @@ const loadRazorpay = () => {
 const CustomerPayment = () => {
   const [customer, setCustomer] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState({ show: false, success: false, msg: '' });
 
-  useEffect(() => {
-    const storedCustomer = JSON.parse(localStorage.getItem('emiCustomer') || 'null');
-    if (storedCustomer) {
-      setCustomer(storedCustomer);
-      fetchCustomerData(storedCustomer.id);
-      fetchPaymentHistory(storedCustomer.id);
-    } else {
+  const fetchData = useCallback(async (id) => {
+    try {
+      const [custRes, histRes, schedRes] = await Promise.all([
+        fetch(`${BASE_URL}/customer/${id}`),
+        fetch(`${BASE_URL}/payment/history/${id}`),
+        fetch(`${BASE_URL}/schedule/customer/${id}`)
+      ]);
+
+      if (custRes.ok) {
+        const data = await custRes.json();
+        setCustomer(data);
+        localStorage.setItem('emiCustomer', JSON.stringify(data));
+      }
+      if (histRes.ok) setPaymentHistory(await histRes.json());
+      if (schedRes.ok) setSchedule(await schedRes.json());
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchCustomerData = async (id) => {
-    try {
-      const res = await fetch(`${BASE_URL}/customer/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCustomer(data);
-        localStorage.setItem('emiCustomer', JSON.stringify(data));
-      }
-    } catch (err) {
-      console.error("Failed to refresh customer data", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPaymentHistory = async (id) => {
-    setHistoryLoading(true);
-    try {
-      const res = await fetch(`${BASE_URL}/payment/history/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPaymentHistory(data);
-      }
-    } catch (err) {
-      console.error("Failed to load history", err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const downloadReceipt = (payment) => {
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFillColor(0, 0, 0);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.text("PAYMENT RECEIPT", 105, 25, { align: 'center' });
-    
-    // Receipt Info
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.text(`Receipt No: DMS-${payment.id || Math.floor(Math.random()*100000)}`, 20, 50);
-    doc.text(`Date: ${new Date(payment.paymentDate).toLocaleDateString()}`, 190, 50, { align: 'right' });
-    
-    doc.line(20, 55, 190, 55);
-    
-    // Customer Info
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Bill To:", 20, 70);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.text(customer.name, 20, 80);
-    doc.text(customer.mobile1 || customer.mobile, 20, 88);
-    doc.text(customer.address || "N/A", 20, 96);
-
-    // Payment Summary Table Header
-    doc.setFillColor(240, 240, 240);
-    doc.rect(20, 110, 170, 10, 'F');
-    doc.setFont("helvetica", "bold");
-    doc.text("Description", 25, 117);
-    doc.text("Amount", 185, 117, { align: 'right' });
-    
-    // Table Content
-    doc.setFont("helvetica", "normal");
-    doc.text(`EMI Payment for ${customer.productName || 'Loan Account'}`, 25, 130);
-    doc.text(`Rs. ${payment.amount.toLocaleString()}`, 185, 130, { align: 'right' });
-    
-    doc.line(20, 140, 190, 140);
-    
-    // Total
-    doc.setFont("helvetica", "bold");
-    doc.text("Total Paid:", 140, 150);
-    doc.text(`Rs. ${payment.amount.toLocaleString()}`, 185, 150, { align: 'right' });
-    
-    // Footer
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "italic");
-    doc.text("This is an electronically generated receipt. No signature required.", 105, 180, { align: 'center' });
-    doc.text("Thank you for using Daily Management System!", 105, 190, { align: 'center' });
-    
-    doc.save(`Receipt_${customer.name}_${payment.id || 'EMI'}.pdf`);
-  };
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('emiCustomer') || 'null');
+    if (stored) fetchData(stored.id);
+    else setLoading(false);
+  }, [fetchData]);
 
   const handlePayEMI = async () => {
     if (!customer) return;
     setPaying(true);
-    setPaymentStatus({ show: false, success: false, msg: '' });
-
     try {
       const isLoaded = await loadRazorpay();
-      if (!isLoaded) throw new Error("Razorpay SDK failed to load. Are you online?");
+      if (!isLoaded) throw new Error("Payment gateway offline. Please check your internet.");
 
       const orderRes = await fetch(`${BASE_URL}/payment/create-order/${customer.id}`, { method: 'POST' });
-      if (!orderRes.ok) {
-        const errText = await orderRes.text();
-        throw new Error(errText || "Failed to create payment order");
-      }
-      
+      if (!orderRes.ok) throw new Error(await orderRes.text());
       const orderData = await orderRes.json();
 
       const options = {
-        key: 'rzp_test_SiUZm0fwjT39g4', 
-        amount: orderData.amount, 
-        currency: orderData.currency || 'INR',
-        name: 'DMS EMI Payment',
-        description: `EMI + Late Fee for ${customer.productName || 'Loan'}`,
+        key: 'rzp_test_SiUZm0fwjT39g4',
+        amount: orderData.amount,
+        currency: 'INR',
+        name: 'DMS EMI Service',
+        description: `Installment Payment - ${customer.productName}`,
         order_id: orderData.id,
         handler: async function (response) {
-          try {
-            const verifyRes = await fetch(`${BASE_URL}/payment/verify/${customer.id}`, { method: 'POST' });
-            if (!verifyRes.ok) throw new Error("Payment verification failed on server");
-            
-            const updatedCustomer = await verifyRes.json();
-            setCustomer(updatedCustomer);
-            localStorage.setItem('emiCustomer', JSON.stringify(updatedCustomer));
-            fetchPaymentHistory(customer.id);
-            
-            setPaymentStatus({ show: true, success: true, msg: `Payment Successful! Your balance is updated.` });
-          } catch (err) {
-            setPaymentStatus({ show: true, success: false, msg: err.message });
-          } finally {
-            setPaying(false);
-          }
+          const totalToPay = customer.emiAmount + (customer.lateFee || 0);
+          const verifyRes = await fetch(`${BASE_URL}/payment/verify/${customer.id}?amount=${totalToPay}&mode=UPI`, { method: 'POST' });
+          if (verifyRes.ok) {
+            setPaymentStatus({ show: true, success: true, msg: 'EMI Payment Successful! Ledger updated.' });
+            fetchData(customer.id);
+          } else throw new Error("Payment verification failed.");
+          setPaying(false);
         },
-        prefill: {
-          name: customer.name,
-          contact: customer.mobile1 || customer.mobile
-        },
+        prefill: { name: customer.name, contact: customer.mobile },
         theme: { color: '#000000' }
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        setPaymentStatus({ show: true, success: false, msg: response.error.description });
-        setPaying(false);
-      });
-      rzp.open();
-
+      new window.Razorpay(options).open();
     } catch (err) {
       setPaymentStatus({ show: true, success: false, msg: err.message });
       setPaying(false);
     }
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout title="Customer EMI Portal" moduleName="agent" role="customer">
-        <div className="d-flex justify-content-center p-5"><Loader2 size={40} className="animate-spin text-black" /></div>
-      </DashboardLayout>
-    );
-  }
+  if (loading) return (
+    <div className="cust-portal-loading">
+      <Loader2 size={40} className="animate-spin" />
+      <p>Loading your financial summary...</p>
+    </div>
+  );
 
-  if (!customer) {
-    return (
-      <DashboardLayout title="Customer EMI Portal" moduleName="agent" role="customer">
-        <div className="text-center p-5 glass rounded-4">
-          <AlertCircle size={48} className="text-danger mb-3" />
-          <h5 className="fw-bold">Session Expired</h5>
-          <p className="text-muted">Please log in again to view your EMI details.</p>
-          <button className="btn btn-black rounded-pill px-4" onClick={() => window.location.href='/auth/agent/customer'}>Go to Login</button>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  if (!customer) return (
+    <div className="cust-error-state">
+      <AlertCircle size={64} />
+      <h2>Session Expired</h2>
+      <button onClick={() => window.location.href='/auth/agent/customer/login'}>Log In Again</button>
+    </div>
+  );
 
-  const progressPercent = customer.totalAmount ? Math.min(100, (customer.totalPaid / customer.totalAmount) * 100).toFixed(1) : 0;
-  const isOverdue = customer.lateFee > 0;
+  const progress = ((customer.totalPaid / customer.totalAmount) * 100).toFixed(0);
+  const nextEmi = schedule.find(s => s.status === 'PENDING');
 
   return (
-    <DashboardLayout title={`Hello, ${customer.name}`} moduleName="agent" role="customer">
-      
-      {paymentStatus.show && (
-        <div className={`alert border-0 rounded-4 mb-4 d-flex align-items-center gap-3 animate-fade-in ${paymentStatus.success ? 'alert-success bg-success bg-opacity-10 text-success' : 'alert-danger bg-danger bg-opacity-10 text-danger'}`}>
-          {paymentStatus.success ? <CheckCircle size={24}/> : <AlertCircle size={24}/>}
-          <div className="fw-bold">{paymentStatus.msg}</div>
-        </div>
-      )}
-
-      <div className="row g-4 mb-5">
-        <div className="col-lg-8">
-          <div className="glass p-0 border-0 rounded-4 overflow-hidden shadow-sm mb-4">
-            <div className="p-4 bg-black text-white">
-              <div className="d-flex justify-content-between align-items-start mb-4">
-                <div>
-                  <p className="extra-small text-white text-opacity-50 text-uppercase fw-bold mb-1">Loan Account</p>
-                  <h4 className="fw-bold mb-0">{customer.productName || 'Personal Loan'}</h4>
-                </div>
-                <div className="text-end">
-                  <p className="extra-small text-white text-opacity-50 text-uppercase fw-bold mb-1">Status</p>
-                  <span className={`badge rounded-pill ${customer.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'} bg-opacity-20 text-white border border-white border-opacity-20`}>
-                    {customer.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="row g-4">
-                <div className="col-md-6">
-                  <p className="extra-small text-white text-opacity-50 text-uppercase fw-bold mb-1">Outstanding Balance</p>
-                  <h2 className="fw-bold mb-0">₹{(customer.balance + (customer.lateFee || 0)).toLocaleString()}</h2>
-                  {isOverdue && <p className="extra-small text-danger fw-bold mt-1">Includes ₹{customer.lateFee} Late Fee</p>}
-                </div>
-                <div className="col-md-6 text-md-end">
-                  <p className="extra-small text-white text-opacity-50 text-uppercase fw-bold mb-1">Next EMI Due</p>
-                  <h4 className="fw-bold mb-0">{customer.dueDate}th of Month</h4>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-white">
-              <div className="mb-4">
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="small fw-bold">Repayment Progress</span>
-                  <span className="small fw-bold">{progressPercent}%</span>
-                </div>
-                <div className="progress bg-light rounded-pill" style={{ height: '12px' }}>
-                  <div className="progress-bar bg-black rounded-pill" style={{ width: `${progressPercent}%` }}></div>
-                </div>
-              </div>
-
-              <div className="row g-3">
-                <div className="col-6 col-md-3">
-                  <div className="p-3 rounded-4 bg-light text-center">
-                    <p className="extra-small text-muted mb-1">Total Loan</p>
-                    <p className="fw-bold mb-0 small">₹{customer.totalAmount?.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="col-6 col-md-3">
-                  <div className="p-3 rounded-4 bg-light text-center">
-                    <p className="extra-small text-muted mb-1">Total Paid</p>
-                    <p className="fw-bold mb-0 text-success small">₹{customer.totalPaid?.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="col-6 col-md-3">
-                  <div className="p-3 rounded-4 bg-light text-center">
-                    <p className="extra-small text-muted mb-1">EMI Amount</p>
-                    <p className="fw-bold mb-0 small">₹{customer.emiAmount?.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="col-6 col-md-3">
-                  <div className="p-3 rounded-4 bg-light text-center">
-                    <p className="extra-small text-muted mb-1">Months</p>
-                    <p className="fw-bold mb-0 small">{customer.months} Mo</p>
-                  </div>
-                </div>
-              </div>
+    <div className="customer-portal-premium">
+      <div className="portal-container">
+        
+        {/* Header Section */}
+        <header className="portal-header">
+          <div className="user-profile">
+            <div className="avatar-hex">{customer.name[0]}</div>
+            <div className="welcome">
+              <p>Welcome back,</p>
+              <h1>{customer.name}</h1>
             </div>
           </div>
+          <div className="header-status">
+            <span className={`status-tag ${customer.status?.toLowerCase()}`}>{customer.status}</span>
+          </div>
+        </header>
 
-          <div className="glass p-4 border-0 rounded-4 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
-            <div className="d-flex align-items-center gap-3">
-              <div className={`p-3 rounded-circle ${isOverdue ? 'bg-danger bg-opacity-10 text-danger' : 'bg-primary bg-opacity-10 text-primary'}`}>
-                {isOverdue ? <AlertTriangle size={24}/> : <Calendar size={24}/>}
+        {paymentStatus.show && (
+          <div className={`notification-banner ${paymentStatus.success ? 'success' : 'error'}`}>
+             {paymentStatus.success ? <CheckCircle size={20}/> : <AlertTriangle size={20}/>}
+             <p>{paymentStatus.msg}</p>
+             <button onClick={() => setPaymentStatus({ ...paymentStatus, show: false })}><ArrowRight size={16}/></button>
+          </div>
+        )}
+
+        <div className="portal-grid">
+          {/* Main Financial Card */}
+          <section className="main-stats-card">
+            <div className="card-top">
+              <div className="stat-main">
+                <p>Outstanding Balance</p>
+                <h2>₹{(customer.balance + (customer.lateFee || 0)).toLocaleString()}</h2>
+                {customer.lateFee > 0 && <span className="late-fee-tag">+ ₹{customer.lateFee} Late Penalty</span>}
               </div>
-              <div>
-                <h6 className="fw-bold mb-1">{isOverdue ? 'Overdue Payment' : 'Upcoming EMI'}</h6>
-                <p className="extra-small text-muted mb-0">
-                  {isOverdue 
-                    ? `You are ${customer.lateDays} days late. Please pay to avoid further fees.` 
-                    : `Your next EMI is due on ${customer.dueDate}th. Keep your account funded.`}
-                </p>
+              <div className="stat-secondary">
+                <p>Next Installment</p>
+                <h3>₹{customer.emiAmount?.toLocaleString()}</h3>
+                <p className="date">Due: {nextEmi ? new Date(nextEmi.dueDate).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
-            <button 
-              className={`btn ${isOverdue ? 'btn-danger' : 'btn-black'} rounded-pill px-5 py-3 fw-bold d-flex align-items-center gap-2 shadow-lg transition-transform hover-scale`}
-              onClick={handlePayEMI}
-              disabled={paying || customer.balance <= 0}
-            >
-              {paying ? <Loader2 size={18} className="animate-spin" /> : <CreditCard size={18} />}
-              {paying ? 'Processing...' : (customer.balance <= 0 ? 'Loan Completed' : `Pay ₹${(customer.emiAmount + (customer.lateFee || 0)).toLocaleString()}`)}
+            
+            <div className="progress-bar-section">
+              <div className="progress-meta">
+                <span>Repayment Progress</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+              </div>
+            </div>
+
+            <div className="quick-info-row">
+              <div className="q-item">
+                <p>Total Loan</p>
+                <strong>₹{customer.totalAmount?.toLocaleString()}</strong>
+              </div>
+              <div className="q-item">
+                <p>Total Paid</p>
+                <strong>₹{customer.totalPaid?.toLocaleString()}</strong>
+              </div>
+              <div className="q-item">
+                <p>Tenure</p>
+                <strong>{customer.months} Months</strong>
+              </div>
+            </div>
+
+            <button className="pay-now-btn" onClick={handlePayEMI} disabled={paying || customer.balance <= 0}>
+              {paying ? <Loader2 className="animate-spin" /> : <Wallet size={20} />}
+              {paying ? 'Connecting to Gateway...' : (customer.balance <= 0 ? 'Loan Fully Paid' : `Pay ₹${(customer.emiAmount + (customer.lateFee || 0)).toLocaleString()}`)}
             </button>
-          </div>
-        </div>
+          </section>
 
-        <div className="col-lg-4">
-          <div className="glass p-4 border-0 rounded-4 shadow-sm h-100">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h5 className="fw-bold mb-0 d-flex align-items-center gap-2"><History size={20}/> History</h5>
-            </div>
-
-            <div className="history-list d-flex flex-column gap-3">
-              {historyLoading ? (
-                <div className="text-center py-5"><Loader2 className="animate-spin text-muted" /></div>
-              ) : paymentHistory.length === 0 ? (
-                <div className="text-center py-5 opacity-50">
-                   <Receipt size={32} className="mb-2 opacity-20" />
-                   <p className="extra-small">No transaction history found.</p>
-                </div>
-              ) : (
-                paymentHistory.map((h, i) => (
-                  <div key={i} className="d-flex justify-content-between align-items-center p-3 rounded-4 bg-light border-start border-4 border-success shadow-sm">
-                    <div>
-                      <p className="fw-bold mb-0 small">₹{h.amount?.toLocaleString()}</p>
-                      <p className="extra-small text-muted mb-0">{new Date(h.paymentDate).toLocaleDateString()}</p>
+          {/* Right Column: Schedule & History */}
+          <div className="side-column">
+            {/* Upcoming Schedule */}
+            <section className="glass-section">
+              <h3 className="section-title"><Clock size={18}/> Upcoming Schedule</h3>
+              <div className="mini-schedule-list">
+                {schedule.filter(s => s.status === 'PENDING').slice(0, 3).map(s => (
+                  <div className="mini-item" key={s.id}>
+                    <div className="date-box">
+                      <p className="month">{new Date(s.dueDate).toLocaleString('default', { month: 'short' })}</p>
+                      <p className="day">{new Date(s.dueDate).getDate()}</p>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <button className="btn btn-link text-black p-0" title="Download Receipt" onClick={() => downloadReceipt(h)}>
-                        <Download size={16}/>
-                      </button>
-                      <div className="text-end">
-                        <span className="extra-small fw-bold text-success d-block">SUCCESS</span>
-                        <p className="extra-small text-muted mb-0">{h.mode}</p>
-                      </div>
+                    <div className="item-info">
+                      <p className="inst">Installment #{s.installmentNo}</p>
+                      <p className="amt">₹{s.emiAmount}</p>
                     </div>
+                    <ChevronRight size={16} className="text-muted" />
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            </section>
 
-            <div className="mt-5 pt-4 border-top">
-              <h6 className="fw-bold small mb-3">Support & Security</h6>
-              <div className="d-flex align-items-center gap-3 mb-3">
-                <ShieldCheck className="text-success" size={20} />
-                <p className="extra-small text-muted mb-0">Payments are 100% secure with Razorpay SSL Encryption.</p>
+            {/* Recent History */}
+            <section className="glass-section mt-4">
+              <h3 className="section-title"><History size={18}/> Payment History</h3>
+              <div className="mini-history-list">
+                {paymentHistory.slice(0, 5).map(h => (
+                  <div className="history-item" key={h.id}>
+                    <div className="h-icon"><Receipt size={18}/></div>
+                    <div className="h-info">
+                      <p className="h-amt">₹{h.amountPaid}</p>
+                      <p className="h-date">{new Date(h.paidDate).toLocaleDateString()}</p>
+                    </div>
+                    <span className="h-mode">{h.paymentMode}</span>
+                  </div>
+                ))}
+                {paymentHistory.length === 0 && <p className="empty-txt">No transactions found.</p>}
               </div>
-              <div className="d-flex align-items-center gap-3">
-                <TrendingUp className="text-primary" size={20} />
-                <p className="extra-small text-muted mb-0">Timely payments help improve your internal credit score.</p>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
+
+        {/* Security Badge */}
+        <footer className="portal-footer">
+          <div className="security-tag">
+             <ShieldCheck size={16} />
+             <span>Secure Payments by Razorpay • SSL Encrypted</span>
+          </div>
+          <p>© 2024 Daily Management System • Dedicated EMI Portal</p>
+        </footer>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 
 export default CustomerPayment;
-
-

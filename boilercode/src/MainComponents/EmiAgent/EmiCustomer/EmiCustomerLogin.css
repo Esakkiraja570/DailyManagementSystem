@@ -1,0 +1,2 @@
+/* Import shared auth styles from sibling directory */
+@import '../EmiAdmin/EmiAgentLogin.css';

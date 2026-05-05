@@ -1,0 +1,214 @@
+.customer-reg-wrapper {
+  min-height: 100vh;
+  background: #f8fafc;
+  padding: 3rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: 'Inter', sans-serif;
+}
+
+.customer-reg-card {
+  width: 100%;
+  max-width: 900px;
+  background: #fff;
+  border-radius: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.header-section {
+  background: #000;
+  color: #fff;
+  padding: 3rem;
+}
+
+.title-area {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.title-area h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.title-area p {
+  color: #94a3b8;
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+}
+
+.status-pill {
+  margin: 1.5rem 3rem 0;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.status-pill.success { background: #dcfce7; color: #15803d; }
+.status-pill.error { background: #fee2e2; color: #b91c1c; }
+
+.enrollment-grid {
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  letter-spacing: 0.1em;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper svg {
+  position: absolute;
+  left: 1.25rem;
+  color: #94a3b8;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 1rem 1.25rem 1rem 3.5rem;
+  border-radius: 16px;
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.input-wrapper input:focus {
+  outline: none;
+  border-color: #000;
+  background: #fff;
+}
+
+.input-wrapper.disabled input {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.modern-select {
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit-area {
+  padding-top: 2rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-enroll {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 1.25rem;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-enroll:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card-modern {
+  background: #000;
+  color: #fff;
+  border-radius: 24px;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+}
+
+.summary-item {
+  text-align: center;
+}
+
+.summary-item span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+.summary-item p {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.summary-item .emi-value {
+  color: #10b981;
+  font-size: 1.75rem;
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 2s infinite;
+}
+
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@media (max-width: 768px) {
+  .input-row { grid-template-columns: 1fr; }
+}
