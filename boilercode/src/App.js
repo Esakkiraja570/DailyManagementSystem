@@ -14,6 +14,7 @@ import NewspaperBillingPortal from './Pages/Modules/Newspaper/BillingPortal';
 import EmiAgentDashboard from './MainComponents/EmiAgent/EmiMain/EmiAgentDashboard';
 import EmiCustomerDashboard from './MainComponents/EmiAgent/EmiMain/EmiCustomerDashboard';
 import ShopDashboard from './Pages/Modules/SmallShop/ShopDashboard';
+import ShopCustomerDashboard from './Pages/Modules/SmallShop/ShopCustomerDashboard';
 
 // Simple Dashboard Components to make it look "Real"
 const Dashboard = ({ title, module }) => (
@@ -67,7 +68,7 @@ function App() {
         <Route path="/distributor/customer" element={<NewspaperBillingPortal />} />
 
         <Route path="/smallshop/admin" element={<ShopDashboard />} />
-        <Route path="/smallshop/customer" element={<ShopDashboard />} /> {/* Using same for now */}
+        <Route path="/smallshop/customer" element={<ShopCustomerDashboard />} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

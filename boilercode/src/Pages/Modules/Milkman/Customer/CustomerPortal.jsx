@@ -521,7 +521,7 @@ const CustomerPortal = () => {
   const renderOrders = () => {
     const filtered = myOrders.filter(o => {
       const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
-      const matchesSearch = o.productName.toLowerCase().includes(orderSearch.toLowerCase());
+      const matchesSearch = o.productName ? o.productName.toLowerCase().includes(orderSearch.toLowerCase()) : false;
       return matchesStatus && matchesSearch;
     });
 
