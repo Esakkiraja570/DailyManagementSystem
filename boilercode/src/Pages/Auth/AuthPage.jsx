@@ -11,7 +11,6 @@ const AuthPage = () => {
     e.preventDefault();
     console.log(`Authenticating as ${role} for ${moduleId}`);
     // Real-world logic would involve API calls here
-    
     // Navigating to the appropriate dashboard
     navigate(`/${moduleId}/${role}`);
   };

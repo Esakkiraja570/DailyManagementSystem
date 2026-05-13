@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, Users, CreditCard, BarChart3, ArrowRight } from 'lucide-react';
+import { Truck, Users, CreditCard, BarChart3, ArrowRight, X, Globe, CheckCircle2 } from 'lucide-react';
 import Contact from '../Contact/Contact';
 import './Landing.css';
 
@@ -10,19 +10,21 @@ const LandingPage = () => {
   return (
     <div className="landing-wrapper">
       {/* NAVBAR */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-transparent py-4 px-md-5">
+      <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top py-3 border-bottom border-light">
         <div className="container-fluid">
-          <a className="navbar-brand fw-bold fs-3" href="/">DMS</a>
+          <a className="navbar-brand fw-bold fs-4 text-primary-dark" href="/">
+            Daily Management System
+          </a>
           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span className="navbar-toggler-icon"></span>
           </button>
-          <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
-            <ul className="navbar-nav align-items-center">
-              <li className="nav-item mx-3"><a className="nav-link" href="#features">Features</a></li>
-              <li className="nav-item mx-3"><a className="nav-link" href="#about">About</a></li>
-              <li className="nav-item mx-3"><a className="nav-link" href="#contact">Contact</a></li>
-              <li className="nav-item ms-3">
-                <button className="btn btn-dark px-4 rounded-3 fw-bold" onClick={() => navigate('/select-module')}>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav ms-auto align-items-center gap-2">
+              <li className="nav-item"><a className="nav-link fw-semibold px-3" href="#features">Features</a></li>
+              <li className="nav-item"><a className="nav-link fw-semibold px-3" href="#about">About</a></li>
+              <li className="nav-item"><a className="nav-link fw-semibold px-3" href="#contact">Contact</a></li>
+              <li className="nav-item ms-lg-3">
+                <button className="btn btn-primary px-4 rounded-3 fw-bold" onClick={() => navigate('/select-module')}>
                   Get Started
                 </button>
               </li>
@@ -32,121 +34,137 @@ const LandingPage = () => {
       </nav>
 
       {/* HERO SECTION */}
-      <header className="container py-5 mt-md-5">
-        <div className="row align-items-center">
-          <div className="col-lg-6">
-            <h1 className="display-3 fw-bold hero-title mb-4">
-              Smart Daily Management for Modern Businesses
-            </h1>
-            <p className="lead text-muted mb-5 hero-desc">
-              Manage milk distribution, track customers, handle billing, and grow your business — 
-              all in one powerful platform built for Milkmen, Agents, and Small Shops.
-            </p>
-            <div className="d-flex gap-3">
-              <button className="btn btn-dark btn-lg px-4 d-flex align-items-center gap-2" onClick={() => navigate('/select-module')}>
-                Start Free <ArrowRight size={20} />
-              </button>
-              <button className="btn btn-light btn-lg px-4 border shadow-sm">Learn More</button>
+      <header className="hero-section py-5 ">
+        <div className="container py-lg-5 ">
+          <div className="row align-items-center">
+            <div className="col-lg-6 mb-5 mb-lg-0  text-center text-lg-start">
+              <span className="badge rounded-pill bg-soft-blue text-primary px-3 py-2 mb-4 text-uppercase fw-bold ls-1">
+                Transforming Logistics
+              </span>
+              <h1 className="display-4 fw-bold main-headline mb-4">
+                Smart Daily Management for <span className="text-primary">Modern Businesses</span>
+              </h1>
+              <p className="lead text-secondary mb-5 pe-lg-5">
+                Streamline your milk distribution, optimize routes, and scale your delivery business with DMS Solutions. 
+                The all-in-one platform for daily service tracking.
+              </p>
+              <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
+                <button className="btn btn-primary btn-lg px-4 py-3 d-flex align-items-center justify-content-center gap-2 rounded-3 shadow-sm" onClick={() => navigate('/select-module')}>
+                  Start Free <ArrowRight size={20} />
+                </button>
+                <button className="btn btn-light-gray btn-lg px-4 py-3 rounded-3">Learn More</button>
+              </div>
             </div>
-          </div>
-          <div className="col-lg-6 mt-5 mt-lg-0">
-            <div className="hero-img-container shadow-lg animate-fade-in">
-               <div className="hero-mockup glass">
-                  <div className="mockup-header">
-                    <div className="mockup-dots">
-                      <span></span><span></span><span></span>
+            
+            <div className="col-lg-6">
+              <div className="hero-mockup-card shadow-lg p-4 bg-white rounded-4 border">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <div className="d-flex align-items-center gap-2">
+                     <div className="bg-primary p-2 text-white rounded-2"><BarChart3 size={18}/></div>
+                     <span className="fw-bold text-dark">Live Overview</span>
+                  </div>
+                  <div className="d-flex gap-1">
+                    <span className="dot bg-danger"></span><span className="dot bg-warning"></span><span className="dot bg-primary"></span>
+                  </div>
+                </div>
+                <div className="mockup-row d-flex justify-content-between p-3 bg-light rounded-3 mb-3 border-start border-primary border-4">
+                   <div className="text-muted small d-flex align-items-center gap-2"><Truck size={16}/> Daily Deliveries</div>
+                   <span className="fw-bold">1,248</span>
+                </div>
+                <div className="mockup-row d-flex justify-content-between p-3 bg-light rounded-3 mb-4 border-start border-primary border-4">
+                   <div className="text-muted small d-flex align-items-center gap-2"><CreditCard size={16}/> Revenue Today</div>
+                   <span className="fw-bold text-primary">$4,820</span>
+                </div>
+                <div className="row g-3">
+                  <div className="col-6">
+                    <div className="p-3 border rounded-3 bg-white">
+                      <div className="small text-muted mb-1">New Orders</div>
+                      <div className="h5 fw-bold mb-0 text-success">+12%</div>
                     </div>
                   </div>
-                  <div className="mockup-body">
-                    <div className="mockup-sidebar"></div>
-                    <div className="mockup-content">
-                      <div className="mockup-chart-row">
-                        <div className="mockup-chart"></div>
-                        <div className="mockup-chart small"></div>
-                      </div>
-                      <div className="mockup-list">
-                        <div className="mockup-item"></div>
-                        <div className="mockup-item"></div>
-                        <div className="mockup-item"></div>
-                      </div>
+                  <div className="col-6">
+                    <div className="p-3 border rounded-3 bg-white">
+                      <div className="small text-muted mb-1">Success Rate</div>
+                      <div className="h5 fw-bold mb-0">99.8%</div>
                     </div>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* FEATURES SECTION */}
-      <section id="features" className="container-fluid bg-light-gray py-5 mt-5">
-        <div className="container py-5">
-          <h2 className="fw-bold mb-5 border-start border-primary border-4 ps-3">Why Choose DMS?</h2>
+      {/* WHY CHOOSE SECTION */}
+      <div className="text-center mb-5">
+            <h2 className="fw-bold display-6 mb-3">Why Choose DMS?</h2>
+            <h4 className="text-muted mx-auto max-w-600">
+              Purpose-built tools to handle the unique complexities of subscription-based distribution models.
+            </h4>
+          </div>
+      <section id="features" className="py-5 bg-soft">
+        <div className="container-fluid py-5">
+          
           <div className="row g-4">
-            <FeatureCard 
-              icon={<Truck className="text-primary" />} 
-              title="Order Management" 
-              desc="Track daily milk orders and deliveries with precision scheduling and real-time updates." 
-            />
-            <FeatureCard 
-              icon={<Users className="text-info" />} 
-              title="Customer Tracking" 
-              desc="Manage customers and subscriptions effortlessly with automated profile updates." 
-            />
-            <FeatureCard 
-              icon={<CreditCard className="text-secondary" />} 
-              title="Billing & EMI" 
-              desc="Automatic billing and EMI support to streamline your financial workflows and revenue collection." 
-            />
-            <FeatureCard 
-              icon={<BarChart3 className="text-dark" />} 
-              title="Reports & Insights" 
-              desc="Deep business insights and data visualization to help you scale your distribution network." 
-            />
+            <FeatureCard icon={<Truck />} title="Order Management" desc="Automate daily order adjustments, cancellations, and renewals with a few clicks." />
+            <FeatureCard icon={<Users />} title="Customer Tracking" desc="Detailed customer profiles with history, preferences, and geo-tagged delivery points." />
+            <FeatureCard icon={<CreditCard />} title="Billing & EMI" desc="Seamlessly generate invoices and manage recurring payments or EMI options for customers." />
+            <FeatureCard icon={<BarChart3 />} title="Reports & Insights" desc="Deep analytics on route efficiency, product demand, and financial health metrics." />
           </div>
         </div>
       </section>
 
-      {/* MISSION SECTION */}
-      <section id="about" className="container py-5 my-5">
-        <div className="row align-items-center">
-          <div className="col-lg-5 position-relative">
-            <img 
-              src="https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&q=80&w=800" 
-              alt="Workspace" 
-              className="img-fluid rounded-4 shadow"
-            />
-            <div className="uptime-badge p-4 text-white shadow-lg">
-                <h3 className="fw-bold mb-0">99.9%</h3>
-                <small className="opacity-75">Uptime Reliability</small>
+      {/* MISSION/BLUEPRINT SECTION */}
+      <section id="about" className="py-5">
+        <div className="container py-5">
+          <div className="row align-items-center">
+            <div className="col-lg-6 position-relative mb-5 mb-lg-0">
+              <div className="blueprint-img-container rounded-4 overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000" alt="Dashboard" className="img-fluid" />
+              </div>
+              <div className="uptime-badge p-3 bg-dark text-white rounded-3 shadow position-absolute">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-primary p-2 rounded-circle"><CheckCircle2 size={18}/></div>
+                  <div>
+                    <small className="d-block opacity-75 text-uppercase fw-bold ls-1" style={{fontSize:'0.65rem'}}>Infrastructure</small>
+                    <span className="fw-bold">99.9% Uptime Reliability</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="col-lg-6 offset-lg-1 mt-5 mt-lg-0">
-            <span className="text-uppercase text-primary fw-bold small tracking-widest">Our Mission</span>
-            <h2 className="display-5 fw-bold mt-2 mb-4">The Architectural Blueprint for Your Success</h2>
-            <p className="text-muted mb-4">
-              At DMS, we believe that small-scale businesses are the backbone of the economy. Our mission is to provide the same level of digital sophistication to local milkmen and agents as that enjoyed by global logistics giants.
-            </p>
-            <div className="row g-4">
+            <div className="col-lg-6 ps-lg-5">
+              <h2 className="display-5 fw-bold mb-4">The Architectural Blueprint for Your Success</h2>
+              <p className="text-muted mb-5 fs-5 lh-base">
+                We don't just provide software; we provide a foundation. Our systems are built to withstand the rigors of heavy daily distribution, ensuring that every drop counts and every customer is satisfied.
+              </p>
+              <div className="row g-4">
                 <div className="col-6">
-                    <h4 className="fw-bold mb-0">500+</h4>
-                    <p className="text-muted small">Active Agents</p>
+                  <div className="border-start border-primary border-4 ps-4">
+                    <h3 className="fw-bold mb-0">500+</h3>
+                    <p className="text-muted mb-0">Active Agents</p>
+                  </div>
                 </div>
                 <div className="col-6">
-                    <h4 className="fw-bold mb-0">12k+</h4>
-                    <p className="text-muted small">Daily Deliveries</p>
+                  <div className="border-start border-primary border-4 ps-4">
+                    <h3 className="fw-bold mb-0">12k+</h3>
+                    <p className="text-muted mb-0">Daily Deliveries</p>
+                  </div>
                 </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA SECTION */}
-      <section className="container py-5">
-        <div className="cta-card p-5 text-white rounded-5 text-center shadow-lg">
+      <section className="py-5">
+        <div className="container" style={{textAlign:"center"}}>
+          <div className="cta-box rounded-5 text-white text-center p-5 shadow-lg">
             <h2 className="display-5 fw-bold mb-4">Ready to transform your<br/>distribution business?</h2>
-            <button className="btn btn-light btn-lg rounded-pill px-5 fw-bold text-primary" onClick={() => navigate('/select-module')}>
-                Join DMS Today
+            <button className="btn btn-light btn-lg px-5 py-3 fw-bold text-primary rounded-3 shadow" onClick={() => navigate('/select-module')}>
+              Join DMS Today
             </button>
+          </div>
         </div>
       </section>
 
@@ -154,28 +172,43 @@ const LandingPage = () => {
       <Contact />
 
       {/* FOOTER */}
-      <footer className="bg-dark text-white py-5 mt-5">
-        <div className="container d-flex flex-column flex-md-row justify-content-between align-items-center">
-          <div className="fw-bold fs-4 mb-3 mb-md-0">DMS</div>
-          <div className="d-flex gap-4 small opacity-75">
-            <a href="#!" className="text-white text-decoration-none">Privacy Policy</a>
-            <a href="#!" className="text-white text-decoration-none">Terms of Service</a>
-            <a href="#!" className="text-white text-decoration-none">Contact Us</a>
+      <footer className="py-5 border-top bg-white mt-5">
+        <div className="container-fluid">
+          <div className="row align-items-center text-center text-md-start">
+            <div className="col-md-4 mb-4 mb-md-0">
+              <h4 className="fw-bold text-primary-dark">DMS</h4>
+              <p className="text-muted small mb-0">© 2024 Daily Management System. Empowering local distribution.</p>
+            </div>
+            <div className="col-md-4 mb-4 mb-md-0">
+              <div className="d-flex justify-content-center gap-4 small fw-bold text-muted">
+                <a href="#!" className="text-inherit text-decoration-none hover-primary">Privacy Policy</a>
+                <a href="#!" className="text-inherit text-decoration-none hover-primary">Terms of Service</a>
+                <br></br><br></br>
+                <a href="#!" className="text-inherit text-decoration-none hover-primary">Support</a>
+                <a href="#!" className="text-inherit text-decoration-none hover-primary">Contact</a>
+              </div>
+            </div>
+            <div className="col-md-4 text-md-end">
+              <div className="d-flex justify-content-center justify-content-md-end gap-3 text-muted">
+                <a href="#!" className="text-inherit"><X size={20}/></a>
+                <a href="#!" className="text-inherit"><Globe size={20}/></a>
+              </div>
+            </div>
           </div>
-          <div className="small opacity-50 mt-3 mt-md-0">© 2024 DMS. All rights reserved.</div>
         </div>
       </footer>
     </div>
   );
 };
 
-// Sub-component for Feature Cards
 const FeatureCard = ({ icon, title, desc }) => (
-  <div className="col-md-6 col-lg-3">
-    <div className="card h-100 border-0 shadow-sm p-4 rounded-4">
-      <div className="icon-box mb-4">{icon}</div>
-      <h5 className="fw-bold">{title}</h5>
-      <p className="text-muted small mb-0">{desc}</p>
+  <div className="col-lg-3 col-md-6">
+    <div className="card h-100 border-0 shadow-sm p-4 rounded-4 feature-item">
+      <div className="icon-wrapper mb-4 text-primary bg-soft-blue d-flex align-items-center justify-content-center rounded-3" style={{width:'50px', height:'50px'}}>
+        {icon}
+      </div>
+      <h5 className="fw-bold mb-3">{title}</h5>
+      <p className="text-muted small mb-0 lh-base">{desc}</p>
     </div>
   </div>
 );
