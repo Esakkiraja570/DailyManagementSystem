@@ -8,18 +8,26 @@ import {
   Loader2,
   UserPlus,
   LogIn,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  LogOut
 } from 'lucide-react';
 
+import '../../Modules/SmallShop/SmallShop.css';
 import '../../Auth/Auth.css';
+
 import { apiPost, apiGet } from './smallshopApi';
 
 const SmallShopAuth = () => {
-  const { role } = useParams();
+
+  const { role = 'admin' } = useParams();
   const navigate = useNavigate();
+
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     shopName: '',
@@ -27,246 +35,611 @@ const SmallShopAuth = () => {
     password: ''
   });
 
-  // ---------------------------------------------------
-  // HANDLE INPUT CHANGE (With Logic for numeric only)
-  // ---------------------------------------------------
+  // =====================================================
+  // INPUT CHANGE
+  // =====================================================
+
   const handleChange = (e) => {
+
     const { name, value } = e.target;
-    
-    // Logic: Force numeric only for mobile
+
+    // MOBILE ONLY NUMBERS
     if (name === 'mobile') {
-      const numericValue = value.replace(/\D/g, '');
-      setFormData(prev => ({ ...prev, [name]: numericValue }));
+
+      const numericValue =
+        value.replace(/\D/g, '').slice(0, 10);
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+
       return;
     }
 
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // ---------------------------------------------------
-  // VALIDATION LOGIC
-  // ---------------------------------------------------
+  // =====================================================
+  // VALIDATION
+  // =====================================================
+
   const validateForm = () => {
-    if (!formData.mobile || formData.mobile.length !== 10) {
-      setErrorMsg('Please enter a valid 10-digit mobile number');
+
+    if (
+      !formData.mobile ||
+      formData.mobile.length !== 10
+    ) {
+
+      setErrorMsg(
+        'Please enter a valid 10-digit mobile number'
+      );
+
       return false;
     }
 
-    if (role === 'admin') {
-      if (!formData.password || formData.password.length < 4) {
-        setErrorMsg('Password must be at least 4 characters long');
-        return false;
-      }
-
-      if (!isLogin && !formData.shopName.trim()) {
-        setErrorMsg('Please enter your Store Name to register');
-        return false;
-      }
+    // CUSTOMER LOGIN
+    if (role === 'customer') {
+      return true;
     }
+
+    // PASSWORD CHECK
+    if (
+      !formData.password ||
+      formData.password.length < 4
+    ) {
+
+      setErrorMsg(
+        'Password must be at least 4 characters long'
+      );
+
+      return false;
+    }
+
+    // REGISTER STORE NAME
+    if (
+      !isLogin &&
+      !formData.shopName.trim()
+    ) {
+
+      setErrorMsg(
+        'Please enter your Store Name'
+      );
+
+      return false;
+    }
+
     return true;
   };
 
-  // ---------------------------------------------------
-  // HANDLE SUBMIT LOGIC
-  // ---------------------------------------------------
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
+  // =====================================================
+  // SUBMIT
+  // =====================================================
 
-    if (!validateForm()) return;
-    setLoading(true);
+ const handleSubmit = async (e) => {
 
-    try {
-      // -------------------------------------------------
-      // CUSTOMER LOGIN LOGIC
-      // -------------------------------------------------
-      if (role === 'customer') {
-        // Use keys that match the ShopCustomerDashboard
-        localStorage.setItem('custMobile', formData.mobile);
-        localStorage.setItem('smallshopCustomer', JSON.stringify({ mobile: formData.mobile }));
-        
-        navigate('/smallshop/customer');
+  e.preventDefault();
+
+  setErrorMsg('');
+
+  if (!validateForm()) return;
+
+  setLoading(true);
+
+  try {
+
+    // =========================================
+    // CUSTOMER LOGIN (FIXED FLOW)
+    // =========================================
+    if (role === 'customer') {
+
+      const phone = formData.mobile;
+
+      // 🔹 STEP 1: FETCH CUSTOMER
+      const fetchRes = await apiGet(`/customer/fetch/${phone}`);
+
+      if (!fetchRes.success) {
+        setErrorMsg(fetchRes.message || "Customer not found");
         return;
       }
 
-      // -------------------------------------------------
-      // ADMIN AUTH LOGIC (Login / Register)
-      // -------------------------------------------------
-      const endpoint = isLogin ? '/login' : '/register';
-      const payload = isLogin 
-        ? { mobile: formData.mobile, password: formData.password }
-        : { shopName: formData.shopName.trim(), mobile: formData.mobile, password: formData.password };
+      // 🔹 SAVE DATA
+      localStorage.setItem('custMobile', phone);
 
-      const response = await apiPost(endpoint, payload);
+      localStorage.setItem(
+        'smallshopCustomer',
+        JSON.stringify({
+          mobile: phone,
+          name: fetchRes.name,
+          customerId: fetchRes.customerId || fetchRes.id || fetchRes.customer?.id,
+          ...fetchRes
+        })
+      );
 
-      // Save credentials immediately
-      const shopId = response.shopId || response.id;
-      localStorage.setItem('shopId', shopId);
-      if (response.token) localStorage.setItem('token', response.token);
-      localStorage.setItem('smallshop', JSON.stringify(response));
+      // 🔹 REDIRECT TO DASHBOARD
+      navigate('/smallshop/customer');
 
-      // Attempt to enrich the profile data
-      try {
-        const profile = await apiGet(`/profile/${formData.mobile}`);
-        const fullData = { ...response, ...profile };
-        localStorage.setItem('smallshop', JSON.stringify(fullData));
-      } catch (e) {
-        console.warn('Profile enrichment skipped - using auth response');
-      }
-
-      navigate('/smallshop/admin');
-
-    } catch (error) {
-      console.error("Auth Error:", error);
-      setErrorMsg(error.message || 'Authentication failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // =========================================
+    // ADMIN LOGIN / REGISTER (UNCHANGED)
+    // =========================================
+
+    const endpoint =
+      isLogin
+        ? '/login'
+        : '/register';
+
+    const payload = isLogin
+      ? {
+          mobile: formData.mobile,
+          password: formData.password
+        }
+      : {
+          shopName: formData.shopName.trim(),
+          mobile: formData.mobile,
+          password: formData.password
+        };
+
+    const response =
+      await apiPost(endpoint, payload);
+
+    const shopId =
+      response.shopId || response.id;
+
+    localStorage.setItem('shopId', shopId);
+
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+    }
+
+    localStorage.setItem(
+      'smallshop',
+      JSON.stringify(response)
+    );
+
+    try {
+      const profile =
+        await apiGet(`/profile/${formData.mobile}`);
+
+      const fullData = {
+        ...response,
+        ...profile
+      };
+
+      localStorage.setItem(
+        'smallshop',
+        JSON.stringify(fullData)
+      );
+
+    } catch (err) {
+      console.warn('Profile fetch skipped');
+    }
+
+    navigate('/smallshop/admin');
+
+  } catch (error) {
+
+    console.error('AUTH ERROR : ', error);
+
+    setErrorMsg(
+      error.message ||
+      'Authentication failed'
+    );
+
+  } finally {
+
+    setLoading(false);
+  }
+};
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
-    <div className="auth-container">
-      <div className="auth-card animate-fade-in">
-        
-        {/* HEADER */}
-        <div className="auth-header">
-          <button
-            type="button"
-            className="btn btn-link text-muted p-0 mb-4 text-decoration-none d-flex align-items-center gap-2"
-            onClick={() => navigate('/select-role/smallshop')}
-          >
-            <ArrowLeft size={18} /> Back
-          </button>
 
-          <div className="d-flex align-items-center gap-2 mb-2 text-black">
-            <Store size={24} />
-            <span className="fw-bold extra-small tracking-widest text-uppercase">
-              Merchant Portal
-            </span>
+    <div className="merchant-auth-wrapper">
+
+      {/* ================================================= */}
+      {/* TOP NAVBAR */}
+      {/* ================================================= */}
+
+      <nav className="navbar navbar-light bg-transparent px-4 py-3">
+
+        <button
+          className="btn btn-link text-dark text-decoration-none d-flex align-items-center gap-2"
+          onClick={() => navigate('/select-role/smallshop')}
+        >
+          <ArrowLeft size={20} />
+          <span className="fw-semibold">
+            Back
+          </span>
+        </button>
+
+        <span className="navbar-brand fw-bold text-primary fs-4">
+          ShopManager
+        </span>
+
+      </nav>
+
+      {/* ================================================= */}
+      {/* MAIN */}
+      {/* ================================================= */}
+
+      <div className="container d-flex flex-column align-items-center justify-content-center flex-grow-1">
+
+        <div className="merchant-card shadow-sm animate-fade-in">
+
+          {/* ============================================= */}
+          {/* ICON */}
+          {/* ============================================= */}
+
+          <div className="merchant-icon-circle mx-auto">
+
+            <Store
+              color="white"
+              size={28}
+            />
+
           </div>
 
-          <h2 className="fw-bold">
-            {role === 'customer' ? 'Customer Login' : isLogin ? 'Shop Login' : 'Register Shop'}
-          </h2>
-          <p className="text-muted">Small Business Management System</p>
-        </div>
+          {/* ============================================= */}
+          {/* HEADER */}
+          {/* ============================================= */}
 
-        {/* LOGIN / REGISTER TABS */}
-        {role === 'admin' && (
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={isLogin ? 'active' : ''}
-              onClick={() => { setIsLogin(true); setErrorMsg(''); }}
-            >
-              <LogIn size={16} className="me-2" /> Login
-            </button>
-            <button
-              type="button"
-              className={!isLogin ? 'active' : ''}
-              onClick={() => { setIsLogin(false); setErrorMsg(''); }}
-            >
-              <UserPlus size={16} className="me-2" /> Register
-            </button>
-          </div>
-        )}
+          <div className="text-center mt-4 mb-4">
 
-        {/* CUSTOMER INFO ICON */}
-        {role === 'customer' && (
-          <div className="mb-4 text-center">
-            <ShieldCheck size={40} className="text-primary mb-2" />
-            <p className="text-muted small mb-0">
-              Access your bills, rewards, purchase history and offers.
+            <h2 className="merchant-title">
+
+              {
+                role === 'customer'
+                  ? 'Customer Login'
+                  : isLogin
+                    ? 'Merchant Portal'
+                    : 'Register Shop'
+              }
+
+            </h2>
+
+            <p className="merchant-subtitle">
+
+              {
+                role === 'customer'
+                  ? 'Access your bills and offers'
+                  : 'Access your shop dashboard securely'
+              }
+
             </p>
-          </div>
-        )}
 
-        {/* ERROR BOX */}
-        {errorMsg && (
-          <div className="alert alert-danger border-0 rounded-4 small fw-bold">
-            {errorMsg}
-          </div>
-        )}
-
-        {/* AUTH FORM */}
-        <form onSubmit={handleSubmit} className="auth-form">
-          {/* REGISTER ONLY FIELDS */}
-          {!isLogin && role === 'admin' && (
-            <div className="form-group">
-              <label className="fw-bold small">Store Name</label>
-              <input
-                type="text"
-                name="shopName"
-                value={formData.shopName}
-                onChange={handleChange}
-                className="form-control"
-                placeholder="Enter your shop name"
-                required
-              />
-            </div>
-          )}
-
-          {/* MOBILE INPUT */}
-          <div className="form-group">
-            <label className="fw-bold small">Mobile Number</label>
-            <div className="position-relative">
-              <Phone
-                className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                size={18}
-              />
-              <input
-                type="tel"
-                name="mobile"
-                value={formData.mobile}
-                onChange={handleChange}
-                className="form-control ps-5"
-                placeholder="9876543210"
-                maxLength={10}
-                required
-              />
-            </div>
           </div>
 
-          {/* PASSWORD INPUT */}
-          {role === 'admin' && (
-            <div className="form-group">
-              <label className="fw-bold small">Password</label>
-              <div className="position-relative">
-                <Lock
-                  className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+          {/* ============================================= */}
+          {/* TABS */}
+          {/* ============================================= */}
+
+          {
+            role === 'admin' && (
+
+              <div className="merchant-tabs d-flex mb-4">
+
+                <button
+                  type="button"
+                  className={`flex-fill tab-btn ${
+                    isLogin ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setIsLogin(true);
+                    setErrorMsg('');
+                  }}
+                >
+                  <LogIn
+                    size={16}
+                    className="me-2"
+                  />
+                  Login
+                </button>
+
+                <button
+                  type="button"
+                  className={`flex-fill tab-btn ${
+                    !isLogin ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setIsLogin(false);
+                    setErrorMsg('');
+                  }}
+                >
+                  <UserPlus
+                    size={16}
+                    className="me-2"
+                  />
+                  Register
+                </button>
+
+              </div>
+            )
+          }
+
+          {/* ============================================= */}
+          {/* CUSTOMER INFO */}
+          {/* ============================================= */}
+
+          {
+            role === 'customer' && (
+
+              <div className="mb-4 text-center">
+
+                <ShieldCheck
+                  size={40}
+                  className="text-primary mb-2"
+                />
+
+                <p className="text-muted small mb-0">
+                  Access your bills,
+                  rewards and offers
+                </p>
+
+              </div>
+            )
+          }
+
+          {/* ============================================= */}
+          {/* ERROR */}
+          {/* ============================================= */}
+
+          {
+            errorMsg && (
+
+              <div className="alert alert-danger py-2 small border-0 text-center mb-3">
+
+                {errorMsg}
+
+              </div>
+            )
+          }
+
+          {/* ============================================= */}
+          {/* FORM */}
+          {/* ============================================= */}
+
+          <form onSubmit={handleSubmit}>
+
+            {/* STORE NAME */}
+
+            {
+              !isLogin &&
+              role === 'admin' && (
+
+                <div className="form-group mb-3">
+
+                  <label className="form-label-custom">
+                    Store Name
+                  </label>
+
+                  <div className="input-container">
+
+                    <input
+                      type="text"
+                      name="shopName"
+                      value={formData.shopName}
+                      onChange={handleChange}
+                      className="form-control-custom"
+                      placeholder="Enter your shop name"
+                      required
+                    />
+
+                  </div>
+
+                </div>
+              )
+            }
+
+            {/* MOBILE */}
+
+            <div className="form-group mb-3">
+
+              <label className="form-label-custom">
+                Mobile Number
+              </label>
+
+              <div className="input-container">
+
+                <Phone
+                  className="input-icon-left"
                   size={18}
                 />
+
                 <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                  type="tel"
+                  name="mobile"
+                  value={formData.mobile}
                   onChange={handleChange}
-                  className="form-control ps-5"
-                  placeholder="••••••••"
+                  className="form-control-custom has-icon-left"
+                  placeholder="9876543210"
+                  maxLength={10}
                   required
                 />
-              </div>
-            </div>
-          )}
 
-          {/* SUBMIT ACTION */}
-          <button
-            type="submit"
-            className="auth-submit d-flex align-items-center justify-content-center gap-2"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} /> Please wait...
-              </>
-            ) : (
-              <>
-                {role === 'customer' ? 'Continue' : isLogin ? 'Open Store' : 'Create Shop'}
-              </>
-            )}
-          </button>
-        </form>
+              </div>
+
+            </div>
+
+            {/* PASSWORD */}
+
+            {
+              role === 'admin' && (
+
+                <div className="form-group mb-4">
+
+                  <div className="d-flex justify-content-between align-items-center">
+
+                    <label className="form-label-custom">
+                      Password
+                    </label>
+
+                    {
+                      isLogin && (
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 small-link"
+                        >
+                          Forgot?
+                        </button>
+                      )
+                    }
+
+                  </div>
+
+                  <div className="input-container">
+
+                    <Lock
+                      className="input-icon-left"
+                      size={18}
+                    />
+
+                    <input
+                      type={
+                        showPassword
+                          ? 'text'
+                          : 'password'
+                      }
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="form-control-custom has-icon-left"
+                      placeholder="••••••••"
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className="btn-eye"
+                      onClick={() =>
+                        setShowPassword(
+                          !showPassword
+                        )
+                      }
+                    >
+
+                      {
+                        showPassword
+                          ? <EyeOff size={18} />
+                          : <Eye size={18} />
+                      }
+
+                    </button>
+
+                  </div>
+
+                </div>
+              )
+            }
+
+            {/* ========================================= */}
+            {/* SUBMIT */}
+            {/* ========================================= */}
+
+            <button
+              type="submit"
+              className="btn-merchant-primary w-100 mb-3"
+              disabled={loading}
+            >
+
+              {
+                loading ? (
+
+                  <>
+                    <Loader2
+                      className="spinner"
+                      size={20}
+                    />
+                    Please wait...
+                  </>
+
+                ) : (
+
+                  <>
+                    {
+                      role === 'customer'
+                        ? 'Continue'
+                        : isLogin
+                          ? 'Open Store'
+                          : 'Create Shop'
+                    }
+
+                    <LogOut
+                      size={18}
+                      className="ms-2"
+                    />
+
+                  </>
+                )
+              }
+
+            </button>
+
+            {/* ========================================= */}
+            {/* FOOTER INFO */}
+            {/* ========================================= */}
+
+            <div className="merchant-footer-info d-flex align-items-center justify-content-center gap-2">
+
+              <ShieldCheck size={14} />
+
+              <span>
+                Encrypted Merchant Connection
+              </span>
+
+            </div>
+
+          </form>
+
+        </div>
+
       </div>
+
+      {/* ================================================= */}
+      {/* FOOTER */}
+      {/* ================================================= */}
+
+      <footer className="w-100 px-5 py-4 mt-auto border-top bg-white">
+
+        <div className="row align-items-center">
+
+          <div className="col-md-6 text-center text-md-start">
+
+            <h5 className="fw-bold mb-0">
+              ShopManager
+            </h5>
+
+            <p className="text-muted small mb-0">
+              © 2024 ShopManager Secure Portal.
+              All rights reserved.
+            </p>
+
+          </div>
+
+          <div className="col-md-6 text-center text-md-end mt-3 mt-md-0">
+
+            <div className="d-flex justify-content-center justify-content-md-end gap-4 small fw-semibold text-muted">
+
+              <span>Security</span>
+              <span>Privacy Policy</span>
+              <span>Terms of Service</span>
+              <span>Support</span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </footer>
+
     </div>
   );
 };

@@ -2,12 +2,12 @@ import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, MoveLeft, User, Box, CreditCard, Newspaper, Store } from 'lucide-react';
 import '../Selection/ModuleSelection.css'
-
+import  img1 from '../../assets/Milkman1.jpg'
 const modules = [
   {
     id: 'milkman',
     name: 'Milkman Management',
-    img: 'https://images.unsplash.com/photo-1563636619-e910ef2a844b?q=80&w=800',
+    img: img1,
     icon: <Box size={20} />,
     desc: 'Streamline dairy distribution with automated route planning, subscription billing, and real-time inventory tracking for delivery fleets.',
     badge: 'POPULAR'
