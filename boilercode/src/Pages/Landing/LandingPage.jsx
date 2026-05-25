@@ -176,7 +176,7 @@ const LandingPage = () => {
         <div className="container-fluid">
           <div className="row align-items-center text-center text-md-start">
             <div className="col-md-4 mb-4 mb-md-0">
-              <h4 className="fw-bold text-primary-dark">DMS</h4>
+              <h4 className="fw-bold text-primary-dark">Daily Management System</h4>
               <p className="text-muted small mb-0">© 2024 Daily Management System. Empowering local distribution.</p>
             </div>
             <div className="col-md-4 mb-4 mb-md-0">

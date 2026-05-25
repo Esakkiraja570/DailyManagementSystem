@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Newspaper, LogIn, UserPlus, Phone, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 import { npPost } from './npApi';
 
@@ -7,7 +7,14 @@ const inp = { width:'100%',height:44,padding:'0 14px',borderRadius:10,border:'1.
 
 const NewspaperAuth = () => {
   const navigate = useNavigate();
+  const { role } = useParams();
   const [tab, setTab]   = useState('login');
+
+  useEffect(() => {
+    if (role === 'customer') {
+      navigate('/distributor/customer', { replace: true });
+    }
+  }, [role, navigate]);
   const [loading, setL] = useState(false);
   const [error, setErr] = useState('');
   const [f, setF] = useState({ name:'', mobile:'', password:'', businessName:'', area:'' });

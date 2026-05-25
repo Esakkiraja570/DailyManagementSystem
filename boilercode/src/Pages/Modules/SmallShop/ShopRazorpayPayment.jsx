@@ -61,9 +61,9 @@ const ShopRazorpayPayment = ({
         throw new Error('Razorpay SDK failed to load. Check your internet connection.');
       }
 
-      // 2. Create Order from Backend (Matched to our unique shop-payment route)
+      // 2. Create Order from Backend
       const response = await fetch(
-        `${BASE_URL}/shop/payment/create-order`,
+        `http://localhost:1010/api/smallshop/payment/create-order`,
         {
           method: 'POST',
           headers: {

@@ -20,7 +20,7 @@ const RoleSelection = () => {
       <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3 px-4">
         <div className="container-fluid">
           <div className="d-flex align-items-center">
-            <span className="fw-bold text-primary fs-5 me-3">DMS Pro</span>
+            <span className="fw-bold text-primary fs-5 me-3">Daily Management System</span>
             <div className="d-none d-md-flex align-items-center text-muted small breadcrumb-text">
               <span>Global Workspace</span>
               <span className="mx-2">›</span>
@@ -42,7 +42,7 @@ const RoleSelection = () => {
       </nav>
 
 <div className="text-center mb-5">
-          <div className="status-pill mb-4">
+          <div className="status-pill mb-4 mt-4">
             <span className="dot-green"></span> SYSTEMS ARE OPERATIONAL
           </div>
           <h1 className="display-4 fw-bold main-headline mb-3">

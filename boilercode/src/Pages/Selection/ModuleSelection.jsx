@@ -48,7 +48,7 @@ const ModuleSelection = () => {
       <nav className="navbar navbar-expand-lg navbar-light bg-white py-3">
         <div className="container-fluid">
           <div className="d-flex align-items-center">
-            <a className="navbar-brand fw-bold text-primary-dms me-4" href="/">Executive DMS</a>
+            <a className="navbar-brand fw-bold text-primary-dms me-4" href="/">Daily Management System</a>
             <div className="nav-links d-none d-md-block">
                 <a href="/" className="nav-link-item active">Home</a>
             </div>
@@ -112,7 +112,7 @@ const ModuleSelection = () => {
         <div className="container-fluid border-top pt-5">
           <div className="row align-items-center">
             <div className="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                <h6 className="fw-bold mb-1">Executive DMS</h6>
+                <h6 className="fw-bold mb-1">Daily Management System</h6>
                 <p className="text-muted small mb-0">© 2024 Daily Management System. Enterprise Cloud Edition.</p>
             </div>
             <div className="col-md-6">

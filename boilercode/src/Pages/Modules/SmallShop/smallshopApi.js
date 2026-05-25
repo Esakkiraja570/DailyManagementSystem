@@ -80,3 +80,4 @@ export const apiPatch  = (path, body)  => request(shopApi, 'PATCH',  path, body)
 // ─── Customer API ─────────────────────────────────────────────
 export const custApiGet  = (path)       => request(customerApi, 'GET',  path);
 export const custApiPost = (path, body) => request(customerApi, 'POST', path, body);
+export const custApiPut  = (path, body) => request(customerApi, 'PUT',  path, body);

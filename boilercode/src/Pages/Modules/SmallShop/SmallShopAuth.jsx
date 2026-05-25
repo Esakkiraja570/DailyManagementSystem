@@ -17,7 +17,7 @@ import {
 import '../../Modules/SmallShop/SmallShop.css';
 import '../../Auth/Auth.css';
 
-import { apiPost, apiGet } from './smallshopApi';
+import { apiPost, apiGet, getShopId, custApiGet } from './smallshopApi';
 
 const SmallShopAuth = () => {
 
@@ -35,80 +35,34 @@ const SmallShopAuth = () => {
     password: ''
   });
 
-  // =====================================================
-  // INPUT CHANGE
-  // =====================================================
-
   const handleChange = (e) => {
-
     const { name, value } = e.target;
 
-    // MOBILE ONLY NUMBERS
     if (name === 'mobile') {
-
-      const numericValue =
-        value.replace(/\D/g, '').slice(0, 10);
-
-      setFormData(prev => ({
-        ...prev,
-        [name]: numericValue
-      }));
-
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: numericValue }));
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  // =====================================================
-  // VALIDATION
-  // =====================================================
 
   const validateForm = () => {
 
-    if (
-      !formData.mobile ||
-      formData.mobile.length !== 10
-    ) {
-
-      setErrorMsg(
-        'Please enter a valid 10-digit mobile number'
-      );
-
+    if (!formData.mobile || formData.mobile.length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit mobile number');
       return false;
     }
 
-    // CUSTOMER LOGIN
-    if (role === 'customer') {
-      return true;
-    }
+    if (role === 'customer') return true;
 
-    // PASSWORD CHECK
-    if (
-      !formData.password ||
-      formData.password.length < 4
-    ) {
-
-      setErrorMsg(
-        'Password must be at least 4 characters long'
-      );
-
+    if (!formData.password || formData.password.length < 4) {
+      setErrorMsg('Password must be at least 4 characters long');
       return false;
     }
 
-    // REGISTER STORE NAME
-    if (
-      !isLogin &&
-      !formData.shopName.trim()
-    ) {
-
-      setErrorMsg(
-        'Please enter your Store Name'
-      );
-
+    if (!isLogin && !formData.shopName.trim()) {
+      setErrorMsg('Please enter your Store Name');
       return false;
     }
 
@@ -116,126 +70,117 @@ const SmallShopAuth = () => {
   };
 
   // =====================================================
-  // SUBMIT
+  // ✅ FIXED SUBMIT
   // =====================================================
+  const handleSubmit = async (e) => {
 
- const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
 
-  e.preventDefault();
+    if (!validateForm()) return;
 
-  setErrorMsg('');
+    setLoading(true);
 
-  if (!validateForm()) return;
+    try {
 
-  setLoading(true);
+      // ================================
+      // CUSTOMER LOGIN FIX
+      // ================================
+      if (role === 'customer') {
 
-  try {
+        const phone = formData.mobile;
+        const shopId = getShopId();
 
-    // =========================================
-    // CUSTOMER LOGIN (FIXED FLOW)
-    // =========================================
-    if (role === 'customer') {
+        if (!shopId) {
+          setErrorMsg("Shop not selected");
+          return;
+        }
 
-      const phone = formData.mobile;
+        // Use custApiGet to hit /api/customer instead of /api/smallshop
+        const fetchRes = await custApiGet(`/fetch/${phone}`);
 
-      // 🔹 STEP 1: FETCH CUSTOMER
-      const fetchRes = await apiGet(`/customer/fetch/${phone}`);
+        // The Java backend returns { success: true, name, customerId, phone }
+        if (!fetchRes || fetchRes.success === false) {
+          setErrorMsg(fetchRes?.message || "Customer not found");
+          return;
+        }
 
-      if (!fetchRes.success) {
-        setErrorMsg(fetchRes.message || "Customer not found");
+        localStorage.setItem('custMobile', phone);
+
+        localStorage.setItem(
+          'smallshopCustomer',
+          JSON.stringify({
+            mobile: phone,
+            name: fetchRes.name,
+            customerId: fetchRes.id,
+            ...fetchRes
+          })
+        );
+
+        navigate('/smallshop/customer');
         return;
       }
 
-      // 🔹 SAVE DATA
-      localStorage.setItem('custMobile', phone);
+      // ================================
+      // ADMIN LOGIN / REGISTER
+      // ================================
 
-      localStorage.setItem(
-        'smallshopCustomer',
-        JSON.stringify({
-          mobile: phone,
-          name: fetchRes.name,
-          customerId: fetchRes.customerId || fetchRes.id || fetchRes.customer?.id,
-          ...fetchRes
-        })
-      );
+      const endpoint = isLogin ? '/login' : '/register';
 
-      // 🔹 REDIRECT TO DASHBOARD
-      navigate('/smallshop/customer');
+      const payload = isLogin
+        ? {
+            mobile: formData.mobile,
+            password: formData.password
+          }
+        : {
+            shopName: formData.shopName.trim(),
+            mobile: formData.mobile,
+            password: formData.password
+          };
 
-      return;
-    }
+      const response = await apiPost(endpoint, payload);
 
-    // =========================================
-    // ADMIN LOGIN / REGISTER (UNCHANGED)
-    // =========================================
+      const shopId = response.shopId || response.id;
 
-    const endpoint =
-      isLogin
-        ? '/login'
-        : '/register';
+      localStorage.setItem('shopId', shopId);
 
-    const payload = isLogin
-      ? {
-          mobile: formData.mobile,
-          password: formData.password
-        }
-      : {
-          shopName: formData.shopName.trim(),
-          mobile: formData.mobile,
-          password: formData.password
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+      }
+
+      localStorage.setItem('smallshop', JSON.stringify(response));
+
+      try {
+        const profile = await apiGet(`/profile/${formData.mobile}`);
+
+        const fullData = {
+          ...response,
+          ...profile
         };
 
-    const response =
-      await apiPost(endpoint, payload);
+        localStorage.setItem('smallshop', JSON.stringify(fullData));
 
-    const shopId =
-      response.shopId || response.id;
+      } catch (err) {
+        console.warn('Profile fetch skipped');
+      }
 
-    localStorage.setItem('shopId', shopId);
+      navigate('/smallshop/admin');
 
-    if (response.token) {
-      localStorage.setItem('token', response.token);
-    }
+    } catch (error) {
 
-    localStorage.setItem(
-      'smallshop',
-      JSON.stringify(response)
-    );
+      console.error('AUTH ERROR : ', error);
 
-    try {
-      const profile =
-        await apiGet(`/profile/${formData.mobile}`);
-
-      const fullData = {
-        ...response,
-        ...profile
-      };
-
-      localStorage.setItem(
-        'smallshop',
-        JSON.stringify(fullData)
+      setErrorMsg(
+        error.message || 'Authentication failed'
       );
 
-    } catch (err) {
-      console.warn('Profile fetch skipped');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    navigate('/smallshop/admin');
-
-  } catch (error) {
-
-    console.error('AUTH ERROR : ', error);
-
-    setErrorMsg(
-      error.message ||
-      'Authentication failed'
-    );
-
-  } finally {
-
-    setLoading(false);
-  }
-};
+  // 👉 UI SAME (NO CHANGE)
+ 
   // =====================================================
   // UI
   // =====================================================

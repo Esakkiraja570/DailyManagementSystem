@@ -155,7 +155,7 @@ const MilkmanAuth = () => {
             <ArrowLeft size={18} /> <span>Back</span>
           </div>
           <div className="nav-divider mx-2"></div>
-          <span className="brand-logo">DairyFlow</span>
+          <span className="brand-logo">Dairy Management</span>
         </div>
       </nav>
 
