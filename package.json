@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "npm start --prefix boilercode",
+    "build": "npm run build --prefix boilercode",
+    "test": "npm run test --prefix boilercode"
+  },
   "dependencies": {
     "lucide-react": "^1.14.0"
   }
