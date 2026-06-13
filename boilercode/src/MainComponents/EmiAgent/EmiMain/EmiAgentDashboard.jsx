@@ -1,26 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users,
   Briefcase,
   CheckSquare,
   AlertTriangle,
   Search,
   Plus,
   Settings,
-  DollarSign,
   Loader2,
   X,
   Trash2,
   Calendar,
   Bell,
   HelpCircle,
-  Download,
-  MapPin,
-  PhoneCall,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 const BASE_URL = 'http://localhost:1010';
@@ -49,6 +41,7 @@ const EmiAgentDashboard = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const [customerDetails, setCustomerDetails] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [customerHistory, setCustomerHistory] = useState([]);
   const [customerSchedule, setCustomerSchedule] = useState([]);
 

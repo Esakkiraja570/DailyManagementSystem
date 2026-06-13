@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Phone, Lock, ArrowLeft, ShieldCheck, User, MapPin, Eye, EyeOff, LogIn, UserPlus, HelpCircle, AlertCircle } from 'lucide-react';
+import { Phone, Lock, ArrowLeft, ShieldCheck, User, MapPin, Eye, EyeOff, LogIn, HelpCircle, AlertCircle } from 'lucide-react';
 import './EmiCustomer/EMIAuth.css';
 
 const BASE_URL = "http://localhost:1010";
@@ -270,9 +270,9 @@ const EMIAuth = () => {
       <footer className="auth-footer">
         <div className="footer-left">EMI Gateway <span>© 2024 EMI Management System. Secure Fidelity Encryption.</span></div>
         <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Security Whitepaper</a>
+          <a href="/#">Privacy Policy</a>
+          <a href="/#">Terms of Service</a>
+          <a href="/#">Security Whitepaper</a>
         </div>
       </footer>
     </div>

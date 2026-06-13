@@ -25,6 +25,7 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
 
   const [quantities, setQuantities] = useState({});
 
+  // eslint-disable-next-line no-unused-vars
   const milkmanMobile = getMilkmanMobile();
 
   // ✅ FIXED: correct dependency + API consistency
@@ -45,7 +46,7 @@ const AddEntry = ({ customer, globalPrice, onBack, onViewBill }) => {
     } finally {
       setLoading(false);
     }
-  }, [customer?.id, BASE_URL]);
+  }, [customer?.id]);
 
   useEffect(() => {
     fetchData();

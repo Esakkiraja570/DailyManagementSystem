@@ -227,6 +227,8 @@ const mockBackend = async (method, path, body = {}) => {
   }
 
   if (path.startsWith('/api/customer/bill/')) {
+    // eslint-disable-next-line no-unused-vars
+    const id = Number(path.split('/').pop());
     return 240.0; // static mock as per requirement
   }
   if (path.startsWith('/api/customer/monthly-bill/')) {

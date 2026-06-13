@@ -3,8 +3,8 @@ import axios from 'axios';
 import { BASE_URL, getMilkmanMobile } from './milkmanApi';
 import { 
   Package, Plus, Image as ImageIcon, Trash2, 
-  Zap, ZapOff, CheckCircle, XCircle, Loader2, 
-  ArrowLeft, Tag, ShoppingBag, MessageSquare, AlertTriangle
+  Loader2, 
+  ArrowLeft
 } from 'lucide-react';
 import './Dashboard.css';
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, Plus, Calendar, PauseCircle, PlayCircle } from 'lucide-react';
-import { npGet, npPost, npPut } from './npApi';
+import { Loader2, Calendar, PauseCircle, PlayCircle } from 'lucide-react';
+import { npGet, npPut } from './npApi';
 
 const inp  = { width:'100%', height:40, padding:'0 12px', borderRadius:9, border:'1.5px solid #e2e8f0', fontSize:14, outline:'none', boxSizing:'border-box' };
 const card = { background:'#fff', borderRadius:16, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,.07)', marginBottom:16 };

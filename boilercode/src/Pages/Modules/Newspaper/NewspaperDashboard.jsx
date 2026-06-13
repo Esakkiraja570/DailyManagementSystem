@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Newspaper, Users, BookOpen, CreditCard, LayoutDashboard,
-  LogOut, TrendingUp, AlertCircle, Loader2
+  Newspaper, Users, CreditCard, LayoutDashboard,
+  LogOut, TrendingUp, Loader2
 } from 'lucide-react';
 import { npGet, getMobile } from './npApi';
 import CustomersTab  from './CustomersTab';

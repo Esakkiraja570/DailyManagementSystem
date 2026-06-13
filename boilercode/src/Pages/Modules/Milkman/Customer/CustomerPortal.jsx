@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard, User, Droplet, ShoppingBag, Receipt,
-  Bell, Search, ChevronRight, Plus, Minus, Package,
-  CreditCard, Zap, Loader2, ClipboardList, Phone, ArrowRight, X,
-  MessageCircle, HelpCircle, LogOut, CheckCircle2, AlertCircle, Clock, Send, Star, RefreshCcw
+  Bell, Search, ChevronRight, Package,
+  CreditCard, Zap, Loader2, ClipboardList, Phone, ArrowRight,
+  MessageCircle, HelpCircle, LogOut, CheckCircle2, Clock, Send, Star, RefreshCcw
 } from 'lucide-react';
 import { BASE_URL } from '../milkmanApi';
 import BillingSummery from '../BillingSummery';
@@ -183,6 +183,7 @@ const CustomerPortal = () => {
   const totalBill = totalMilkBill + totalProductBill;
   const unreadCount = notifications.filter(n => n.unread).length;
 
+  // eslint-disable-next-line no-unused-vars
   const updateQty = (id, d) => setQuantities(p => ({ ...p, [id]: Math.max(1, (p[id] || 1) + d) }));
 
   const handleOrder = async (product, qtyInput) => {

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  Newspaper, Users, BookOpen, FileText, CreditCard,
-  LogOut, Loader2, Plus, Edit2, Trash2, ChevronRight,
-  AlertCircle, TrendingUp, Phone, MapPin, Calendar
+  Users,
+  Loader2, Plus, Trash2,
+  MapPin
 } from 'lucide-react';
-import { npGet, npPost, npPut, npDelete, getMobile } from './npApi';
+import { npGet, npPost, npDelete } from './npApi';
 
 // ── styles ────────────────────────────────────────────────────
 const card  = { background:'#fff', borderRadius:16, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,.07)', marginBottom:16 };

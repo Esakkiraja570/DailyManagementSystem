@@ -14,13 +14,7 @@ import {
   LogOut,
   Download,
   ShieldCheck,
-  Info,
-  Clock,
-  Search,
-  Printer,
   Bell,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Lock
 } from 'lucide-react';

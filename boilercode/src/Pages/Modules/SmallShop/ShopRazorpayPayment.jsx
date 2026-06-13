@@ -7,7 +7,7 @@ import {
   XCircle
 } from 'lucide-react';
 
-import { BASE_URL } from './smallshopApi';
+
 
 const RAZORPAY_KEY = 'rzp_test_SiUZm0fwjT39g4';
 
