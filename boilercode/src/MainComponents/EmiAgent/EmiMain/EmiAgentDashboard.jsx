@@ -7,6 +7,7 @@ import {
   Search,
   Plus,
   Settings,
+  DollarSign,
   Loader2,
   X,
   Trash2,
