@@ -1,0 +1,3 @@
+# Ignore backend directories as requested
+UpdatedBackend/
+DeployBackend/
