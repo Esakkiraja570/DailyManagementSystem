@@ -2,11 +2,11 @@
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copy pom.xml and source code
-COPY pom.xml .
-COPY src ./src
+# Copy the pom.xml and source code from the RenderBackend folder
+COPY RenderBackend/Daily-Management-System-DMS/pom.xml .
+COPY RenderBackend/Daily-Management-System-DMS/src ./src
 
-# Build the application
+# Build the application inside the container (skipping tests)
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run the application
